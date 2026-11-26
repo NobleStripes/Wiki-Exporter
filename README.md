@@ -46,13 +46,3 @@ Article exports are Markdown files with the title, source URL, and retrieval tim
 4. Save the downloaded Markdown file.
 
 The extension currently supports Fandom pages only.
-
-## Project files
-
-- `manifest.json` — Chrome extension metadata and permissions.
-- `popup.html` and `popup.js` — The extension popup and single-article export.
-- `category.html` and `category-page.js` — Category page UI and article listing.
-- `category.js` — Fandom category URL checks and category-member retrieval.
-- `styles.css` — Shared styles for the popup and category page.
-- `batch.js`, `exporter.js`, and `parser.js` — In-development modules; not yet wired into the extension.
-- `vendor/` — Turndown and its GitHub Flavored Markdown plugin; JSZip is bundled but not yet used.
