@@ -87,44 +87,11 @@
             formatversion: "2"
         });
 
-        const response = await fetch(
-            `${url.origin}/api.php?${params}`,
-            {
-                signal,
-                credentials: "omit"
-            }
+        const data = await WikiRequest.getJSON(
+            url.origin,
+            params,
+            signal
         );
-
-        if (!response.ok) {
-
-            const error = new Error(
-                `HTTP ${response.status}`
-            );
-
-            // Stop if access is denied or rate-limited.
-            error.stopBatch = [403, 429, 503].includes(
-                response.status
-            );
-
-            throw error;
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-
-            const error = new Error(
-                data.error.info || data.error.code
-            );
-
-            error.stopBatch = [
-                "ratelimited",
-                "maxlag",
-                "readonly"
-            ].includes(data.error.code);
-
-            throw error;
-        }
 
         const parsed = data.parse;
 
@@ -302,6 +269,16 @@
             return;
         }
 
+        if (articles.length > WikiRequest.MAX_BATCH) {
+
+            status.textContent =
+                `You selected ${articles.length} articles. ` +
+                `The maximum is ${WikiRequest.MAX_BATCH} ` +
+                "articles per export. Reduce your selection.";
+
+            return;
+        }
+
         const categoryUrl = new URL(
             new URLSearchParams(location.search).get("url")
         );
@@ -390,13 +367,6 @@
                 }
 
                 progress.value = i + 1;
-
-                // Space out requests.
-                if (i < articles.length - 1 && !signal.aborted) {
-                    await new Promise(
-                        resolve => setTimeout(resolve, 750)
-                    );
-                }
             }
 
             const unprocessed =

@@ -96,7 +96,7 @@ and local document conversion.
 
 Category exports space article requests, provide
 cancellation controls, and stop on selected server errors.
-A hard batch size limit is not currently enforced.
+Each batch export is limited to 100 selected articles.
 
 It is not designed to circumvent access restrictions,
 authentication requirements, or rate limits.
@@ -104,6 +104,34 @@ authentication requirements, or rate limits.
 Users are responsible for ensuring that their use
 complies with applicable website terms, permissions,
 content licenses, and laws.
+
+Fandom's terms restrict automated retrieval without
+permission and prohibit bypassing access restrictions.
+These safeguards reduce server load and prevent
+problematic request behavior, but they do not establish
+authorization or guarantee protection from account
+restrictions. Where permitted, Fandom's official
+`Special:Export` is an alternative way to obtain content.
+
+### Project Policies
+
+- **Human-directed retrieval:** Only retrieve articles
+  and categories explicitly selected by the user.
+- **Read-only operation:** Never edit articles, submit
+  forms, or modify wiki accounts.
+- **No credential collection:** Do not collect cookies,
+  passwords, or authentication tokens.
+- **No access-control circumvention:** Stop when the
+  website denies access.
+- **No background crawling:** No scheduled retrieval or
+  automatic discovery of unrelated pages.
+- **Local processing:** Generate documents on the
+  user's device.
+- **Source attribution:** Retain original article URLs
+  and, where available, revision information. License
+  details are not yet included in exports.
+- **No telemetry:** Do not transmit browsing activity or
+  exported documents to the developer's servers.
 
 ### Independence
 

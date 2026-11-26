@@ -55,22 +55,11 @@ async function getCategoryMembers(categoryUrl, signal) {
             ...continuation
         });
 
-        const response = await fetch(
-            `${url.origin}/api.php?${params}`,
-            { signal, credentials: "omit" }
+        const data = await WikiRequest.getJSON(
+            url.origin,
+            params,
+            signal
         );
-
-        if (!response.ok) {
-            throw new Error(
-                `HTTP error: ${response.status}`
-            );
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error.info);
-        }
 
         for (const member of data.query.categorymembers) {
             members.set(member.pageid, {
