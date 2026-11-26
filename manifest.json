@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "Wiki Exporter",
+    "version": "0.1.0",
+    "description": "No AI. Human crawler. For lazy people.",
+    "permissions": [
+        "activeTab",
+        "scripting"
+    ],
+    "optional_host_permissions": [
+        "https://*.fandom.com/*"
+    ],
+    "action": {
+        "default_popup": "popup.html"
+    }
+}

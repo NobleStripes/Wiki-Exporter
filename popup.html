@@ -1,0 +1,48 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="styles.css">
+  <title>Wiki Exporter</title>
+  <style>
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: system-ui, sans-serif;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      cursor: pointer;
+    }
+
+    #status {
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body class="popup-page">
+  <h2>Wiki Exporter</h2>
+
+  <p class="tagline">
+    No AI. Human crawler. For lazy people.
+  </p>
+
+  <button id="export">
+    Export article as Markdown
+  </button>
+
+  <p id="status"></p>
+
+  <script src="vendor/turndown.js"></script>
+  <script src="vendor/turndown-plugin-gfm.js"></script>
+  <script src="category.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
