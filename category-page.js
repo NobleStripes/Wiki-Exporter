@@ -9,6 +9,11 @@ document.getElementById("load-category")
 
         try {
 
+            document.getElementById("load-category")
+                .disabled = true;
+
+            articleList.replaceChildren();
+
             const url = new URL(categoryUrl);
 
             if (
@@ -64,6 +69,11 @@ document.getElementById("load-category")
 
         } catch (error) {
             status.textContent = error.message;
+            
+        } finally {
+
+            document.getElementById("load-category")
+                .disabled = false;
         }
 
     });

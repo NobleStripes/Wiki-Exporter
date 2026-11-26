@@ -1,4 +1,3 @@
-
 /* ========================================
    Wiki Exporter — Stylesheet
    ======================================== */
@@ -302,4 +301,41 @@ footer {
     .toolbar button {
         flex: 1 1 auto;
     }
+}
+
+/* ========================================
+   Batch Export
+   ======================================== */
+
+#batch-progress {
+    margin: 16px 0 8px;
+}
+
+#batch-status {
+    color: var(--text-secondary);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+#batch-report {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--error);
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+#article-list input:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+#batch-progress[hidden],
+#batch-report[hidden] {
+    display: none;
 }
