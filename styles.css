@@ -412,3 +412,37 @@ footer {
 .popup-page select {
     margin: 8px 0;
 }
+
+/* ========================================
+   Article Selection Controls
+   ======================================== */
+
+#selection-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 8px;
+}
+
+#selection-toolbar button {
+    padding: 8px 14px;
+    font-size: 13px;
+}
+
+#selection-count {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+
+    #selection-count {
+        width: 100%;
+        margin-left: 0;
+    }
+
+}

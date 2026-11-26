@@ -17,6 +17,15 @@
     const formatOptions =
         document.getElementById("format-options");
 
+    const selectAllButton =
+        document.getElementById("select-all");
+
+    const selectNoneButton =
+        document.getElementById("select-none");
+
+    const selectionCount =
+        document.getElementById("selection-count");
+
     let controller = null;
 
     // ========================================
@@ -34,12 +43,74 @@
     }
 
     function syncControls() {
-        exportButton.disabled =
-            controller !== null ||
-            getSelectedArticles().length === 0;
 
-        cancelButton.disabled = controller === null;
+        const checkboxes = articleList.querySelectorAll(
+            'input[type="checkbox"]'
+        );
+
+        const total = checkboxes.length;
+
+        const selected = articleList.querySelectorAll(
+            'input[type="checkbox"]:checked'
+        ).length;
+
+        const exporting = controller !== null;
+
+        // Update selection counter.
+        selectionCount.textContent =
+            `${selected} of ${total} selected`;
+
+        // Export controls.
+        exportButton.disabled =
+            exporting || selected === 0;
+
+        cancelButton.disabled =
+            !exporting;
+
+        // Selection controls.
+        selectAllButton.disabled =
+            exporting || total === 0 || selected === total;
+
+        selectNoneButton.disabled =
+            exporting || selected === 0;
     }
+
+    // ========================================
+    // Article Selection Controls
+    // ========================================
+
+    function setAllArticles(checked) {
+
+        if (controller) return;
+
+        const checkboxes = articleList.querySelectorAll(
+            'input[type="checkbox"]'
+        );
+
+        checkboxes.forEach(box => {
+
+            box.checked = checked;
+
+        });
+
+        syncControls();
+    }
+
+    // Select all articles.
+
+    selectAllButton.addEventListener("click", () => {
+
+        setAllArticles(true);
+
+    });
+
+    // Deselect all articles.
+
+    selectNoneButton.addEventListener("click", () => {
+
+        setAllArticles(false);
+
+    });
 
     articleList.addEventListener("change", syncControls);
 
