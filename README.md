@@ -1,14 +1,30 @@
 # Wiki Exporter
 
-A lightweight Chrome extension that exports Fandom articles as Markdown. No AI—just a human crawler for lazy people.
+*No AI. Human crawler. For lazy people.*
+
+A lightweight, human-directed utility for exporting wiki articles and categories into clean, research-ready documents.
+
+You find the pages. You choose the sources. The exporter handles the tedious part.
 
 ## Features
 
-- Extracts article content from Fandom pages.
-- Converts the article to Markdown, including GitHub Flavored Markdown formatting.
-- Adds the article title, source URL, and retrieval time to the export.
-- Removes scripts, styles, iframes, edit links, ads, and the table of contents from the extracted content.
-- Downloads the result as a `.md` file.
+- **Human-powered discovery:** Find your own articles. The developer assumes you know how to use a search bar.
+- **Single article export:** Because copying and pasting entire wiki articles is tedious.
+- **Category export:** For when your research obsession gets out of hand.
+- **No AI:** It's a document converter. It doesn't need artificial intelligence.
+- **No hallucinations:** Any questionable lore comes courtesy of the original wiki contributors.
+- **Human quality control:** The developer is also the guinea pig.
+- **No subscription:** Nobody should have to pay monthly to convert HTML into Markdown.
+
+**Built out of laziness. Maintained out of spite. Used for research.**
+
+## Development note
+
+AI tools assisted with debugging and rapid prototyping. The extension itself doesn't use AI to generate, summarize, or rewrite content.
+
+Category export is in development: the category page can list articles, but exporting them is not yet implemented.
+
+Article exports are Markdown files with the title, source URL, and retrieval time. The exporter removes scripts, styles, iframes, edit links, ads, and the table of contents.
 
 ## Requirements
 
@@ -34,5 +50,9 @@ The extension currently supports Fandom pages only.
 ## Project files
 
 - `manifest.json` — Chrome extension metadata and permissions.
-- `popup.html` and `popup.js` — The extension popup and export behavior.
-- `vendor/` — Turndown and its GitHub Flavored Markdown plugin.
+- `popup.html` and `popup.js` — The extension popup and single-article export.
+- `category.html` and `category-page.js` — Category page UI and article listing.
+- `category.js` — Fandom category URL checks and category-member retrieval.
+- `styles.css` — Shared styles for the popup and category page.
+- `batch.js`, `exporter.js`, and `parser.js` — In-development modules; not yet wired into the extension.
+- `vendor/` — Turndown and its GitHub Flavored Markdown plugin; JSZip is bundled but not yet used.
