@@ -173,15 +173,11 @@ function downloadFile(
   type = "text/markdown"
 ) {
 
-  const Blob = content instanceof Blob
+  const blob = content instanceof Blob
     ? content
     : new Blob([content], {
       type: `${type};charset=utf-8`
     });
-
-  const blob = new Blob([content], {
-    type: `${type};charset=utf-8`
-  });
 
   const url = URL.createObjectURL(blob);
 
