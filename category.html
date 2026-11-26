@@ -41,6 +41,22 @@
 
             <div id="article-list"></div>
 
+            <fieldset id="output-options">
+
+                <legend>Output Mode</legend>
+
+                <label class="export-option">
+                    <input type="radio" name="output-mode" value="combined" checked>
+                    Combined Markdown document (.md)
+                </label>
+
+                <label class="export-option">
+                    <input type="radio" name="output-mode" value="separate">
+                    Separate Markdown files (.zip)
+                </label>
+
+            </fieldset>
+
             <div class="toolbar">
 
                 <button id="export-batch" disabled>
@@ -70,6 +86,7 @@
 
     <script src="vendor/turndown.js"></script>
     <script src="vendor/turndown-plugin-gfm.js"></script>
+    <script src="vendor/jszip.min.js"></script>
     <script src="category.js"></script>
     <script src="category-page.js"></script>
     <script src="batch.js"></script>

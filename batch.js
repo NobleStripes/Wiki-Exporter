@@ -12,6 +12,8 @@
     const status = document.getElementById("batch-status");
     const progress = document.getElementById("batch-progress");
     const report = document.getElementById("batch-report");
+    const outputOptions =
+        document.getElementById("output-options");
 
     let controller = null;
 
@@ -132,11 +134,10 @@
             throw new Error("No article content received.");
         }
 
-        const sourceUrl = `${url.origin}/wiki/${
-            encodeURIComponent(
-                parsed.title.replaceAll(" ", "_")
-            )
-        }`;
+        const sourceUrl = `${url.origin}/wiki/${encodeURIComponent(
+            parsed.title.replaceAll(" ", "_")
+        )
+            }`;
 
         return {
             title: parsed.title,
@@ -284,6 +285,9 @@
         if (controller) return;
 
         const articles = getSelectedArticles();
+        const outputMode = outputOptions.querySelector(
+            'input[name="output-mode"]:checked'
+        )?.value || "combined";
 
         if (!articles.length) {
             status.textContent = "No articles selected.";
@@ -308,6 +312,7 @@
         let stopReason = "";
 
         loadButton.disabled = true;
+        outputOptions.disabled = true;
 
         articleList.querySelectorAll('input[type="checkbox"]')
             .forEach(box => box.disabled = true);
@@ -346,9 +351,11 @@
                         signal
                     );
 
-                    completed.push(
-                        convertArticle(article, converter)
-                    );
+                    completed.push({
+                        title: article.title,
+                        url: article.url,
+                        markdown: convertArticle(article, converter)
+                    });
 
                 } catch (error) {
 
@@ -404,25 +411,134 @@
                     "Failed articles:\n" + failures.join("\n");
             }
 
+
             if (completed.length) {
 
-                const documentContent = [
-                    summary.join("\n\n"),
-                    ...completed,
-                    ...(failures.length
-                        ? ["# Failed Articles\n\n" + failures.join("\n")]
-                        : [])
-                ].join("\n\n---\n\n");
-
                 const safeName = categoryName
-                    .replace(/[<>:"/\\|?*]/g, "_")
-                    .trim();
+                    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
+                    .trim()
+                    .slice(0, 120) || "Category";
 
-                const filename =
-                    `Wiki_${safeName}${partial ? "_partial" : ""}.md`;
+                const baseFilename =
+                    `Wiki_${safeName}${partial ? "_partial" : ""}`;
 
-                downloadMarkdown(documentContent, filename);
+                cancelButton.disabled = true;
+
+                // ====================================
+                // Combined Markdown document
+                // ====================================
+
+                if (outputMode === "combined") {
+
+                    const documentContent = [
+                        summary.join("\n\n"),
+
+                        ...completed.map(
+                            article => article.markdown
+                        ),
+
+                        ...(failures.length
+                            ? [
+                                "# Failed Articles\n\n" +
+                                failures.join("\n")
+                            ]
+                            : [])
+
+                    ].join("\n\n---\n\n");
+
+                    downloadFile(
+                        documentContent,
+                        `${baseFilename}.md`
+                    );
+
+                }
+
+                // ====================================
+                // Separate Markdown files in ZIP
+                // ====================================
+
+                else if (outputMode === "separate") {
+
+                    status.textContent =
+                        "Creating ZIP archive...";
+
+                    const zip = new JSZip();
+
+                    const folder = zip.folder("articles");
+
+                    const manifest = [
+                        summary.join("\n\n"),
+                        "",
+                        "## Exported Articles",
+                        ""
+                    ];
+
+                    completed.forEach((article, index) => {
+
+                        const safeTitle = article.title
+                            .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
+                            .replace(/\s+/g, "_")
+                            .trim()
+                            .slice(0, 120) || "Article";
+
+                        const number = String(index + 1)
+                            .padStart(3, "0");
+
+                        const filename =
+                            `${number}_${safeTitle}.md`;
+
+                        folder.file(
+                            filename,
+                            article.markdown
+                        );
+
+                        manifest.push(
+                            `- ${filename}: ${article.url}`
+                        );
+
+                    });
+
+                    if (failures.length) {
+
+                        manifest.push(
+                            "",
+                            "## Failed Articles",
+                            "",
+                            ...failures
+                        );
+
+                    }
+
+                    zip.file(
+                        "export_report.md",
+                        manifest.join("\n")
+                    );
+
+                    const zipBlob = await zip.generateAsync({
+
+                        type: "blob",
+                        compression: "DEFLATE",
+
+                        compressionOptions: {
+                            level: 6
+                        }
+
+                    }, metadata => {
+
+                        status.textContent =
+                            `Creating ZIP: ${metadata.percent.toFixed(0)
+                            }%`;
+
+                    });
+
+                    downloadFile(
+                        zipBlob,
+                        `${baseFilename}.zip`
+                    );
+
+                }
             }
+
 
             const message = signal.aborted
                 ? "Export cancelled."
@@ -442,6 +558,7 @@
 
             controller = null;
             loadButton.disabled = false;
+            outputOptions.disabled = false;
 
             articleList.querySelectorAll('input[type="checkbox"]')
                 .forEach(box => box.disabled = false);

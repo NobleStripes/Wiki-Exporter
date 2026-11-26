@@ -339,3 +339,46 @@ footer {
 #batch-report[hidden] {
     display: none;
 }
+
+/* ========================================
+   Export Output Options
+   ======================================== */
+
+#output-options {
+    margin: 16px 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+#output-options legend {
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+
+.export-option:hover {
+    background: var(--surface-hover);
+}
+
+.export-option:has(input:checked) {
+    background: var(--surface-hover);
+}
+
+#output-options:disabled {
+    opacity: 0.6;
+}
+
+#output-options:disabled label {
+    cursor: not-allowed;
+}
