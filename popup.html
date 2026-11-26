@@ -35,14 +35,29 @@
     No AI. Human crawler. For lazy people.
   </p>
 
+  <label for="export-format">
+    Export Format
+  </label>
+
+  <select id="export-format">
+    <option value="md">Markdown (.md)</option>
+    <option value="docx">Microsoft Word (.docx)</option>
+  </select>
+
   <button id="export">
-    Export article as Markdown
+    Export article
   </button>
 
   <p id="status"></p>
 
   <script src="vendor/turndown.js"></script>
   <script src="vendor/turndown-plugin-gfm.js"></script>
+
+  <script src="vendor/docx.js"></script>
+  <script src="vendor/docx-math.js"></script>
+  <script src="vendor/docx-html.js"></script>
+
+  <script src="docx-exporter.js"></script>
   <script src="category.js"></script>
   <script src="popup.js"></script>
 </body>

@@ -14,6 +14,8 @@
     const report = document.getElementById("batch-report");
     const outputOptions =
         document.getElementById("output-options");
+    const formatOptions =
+        document.getElementById("format-options");
 
     let controller = null;
 
@@ -291,6 +293,10 @@
             'input[name="output-mode"]:checked'
         )?.value || "combined";
 
+        const exportFormat = formatOptions.querySelector(
+            'input[name="export-format"]:checked'
+        )?.value || "md";
+
         if (!articles.length) {
             status.textContent = "No articles selected.";
             return;
@@ -330,6 +336,10 @@
 
         try {
 
+            if (exportFormat === "docx") {
+                WikiDocx.ensureReady();
+            }
+
             const converter = new TurndownService({
                 headingStyle: "atx",
                 bulletListMarker: "-",
@@ -354,9 +364,13 @@
                     );
 
                     completed.push({
-                        title: article.title,
-                        url: article.url,
-                        markdown: convertArticle(article, converter)
+                        ...article,
+
+                        retrievedAt: new Date().toISOString(),
+
+                        markdown: exportFormat === "md"
+                            ? convertArticle(article, converter)
+                            : null
                     });
 
                 } catch (error) {
@@ -430,30 +444,52 @@
                 // Combined Markdown document
                 // ====================================
 
+
                 if (outputMode === "combined") {
 
-                    const documentContent = [
-                        summary.join("\n\n"),
+                    if (exportFormat === "docx") {
 
-                        ...completed.map(
-                            article => article.markdown
-                        ),
+                        status.textContent =
+                            "Generating Word document...";
 
-                        ...(failures.length
-                            ? [
-                                "# Failed Articles\n\n" +
-                                failures.join("\n")
-                            ]
-                            : [])
+                        const docxBlob =
+                            await WikiDocx.createDocument(
+                                completed,
+                                summary,
+                                failures
+                            );
 
-                    ].join("\n\n---\n\n");
+                        downloadFile(
+                            docxBlob,
+                            `${baseFilename}.docx`
+                        );
 
-                    downloadFile(
-                        documentContent,
-                        `${baseFilename}.md`
-                    );
+                    } else {
 
+                        const documentContent = [
+
+                            summary.join("\n\n"),
+
+                            ...completed.map(
+                                article => article.markdown
+                            ),
+
+                            ...(failures.length
+                                ? [
+                                    "# Failed Articles\n\n" +
+                                    failures.join("\n")
+                                ]
+                                : [])
+
+                        ].join("\n\n---\n\n");
+
+                        downloadFile(
+                            documentContent,
+                            `${baseFilename}.md`
+                        );
+                    }
                 }
+
 
                 // ====================================
                 // Separate Markdown files in ZIP
@@ -475,7 +511,8 @@
                         ""
                     ];
 
-                    completed.forEach((article, index) => {
+
+                    for (const [index, article] of completed.entries()) {
 
                         const safeTitle = article.title
                             .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
@@ -487,18 +524,23 @@
                             .padStart(3, "0");
 
                         const filename =
-                            `${number}_${safeTitle}.md`;
+                            `${number}_${safeTitle}.${exportFormat}`;
 
-                        folder.file(
-                            filename,
-                            article.markdown
-                        );
+                        status.textContent =
+                            `Generating file ${index + 1} of ${completed.length}...`;
+
+                        const fileContent = exportFormat === "docx"
+
+                            ? await WikiDocx.createDocument([article])
+
+                            : article.markdown;
+
+                        folder.file(filename, fileContent);
 
                         manifest.push(
                             `- ${filename}: ${article.url}`
                         );
-
-                    });
+                    }
 
                     if (failures.length) {
 
@@ -512,10 +554,13 @@
                     }
 
                     zip.file(
-                        "export_report.md",
+                        exportFormat === "docx"
+                            ? "export_report.txt"
+                            : "export_report.md",
+
                         manifest.join("\n")
                     );
-
+                    
                     const zipBlob = await zip.generateAsync({
 
                         type: "blob",

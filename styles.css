@@ -382,3 +382,33 @@ footer {
 #output-options:disabled label {
     cursor: not-allowed;
 }
+
+/* ========================================
+   Export Format Options
+   ======================================== */
+
+#format-options {
+    margin: 16px 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+#format-options legend {
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#format-options:disabled {
+    opacity: 0.6;
+}
+
+#format-options:disabled label {
+    cursor: not-allowed;
+}
+
+.popup-page select {
+    margin: 8px 0;
+}

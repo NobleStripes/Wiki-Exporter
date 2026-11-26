@@ -41,6 +41,22 @@
 
             <div id="article-list"></div>
 
+            <fieldset id="format-options">
+
+                <legend>Export Format</legend>
+
+                <label class="export-option">
+                    <input type="radio" name="export-format" value="md" checked>
+                    Markdown (.md)
+                </label>
+
+                <label class="export-option">
+                    <input type="radio" name="export-format" value="docx">
+                    Microsoft Word (.docx)
+                </label>
+
+            </fieldset>
+
             <fieldset id="output-options">
 
                 <legend>Output Mode</legend>
@@ -87,6 +103,12 @@
     <script src="vendor/turndown.js"></script>
     <script src="vendor/turndown-plugin-gfm.js"></script>
     <script src="vendor/jszip.min.js"></script>
+
+    <script src="vendor/docx.js"></script>
+    <script src="vendor/docx-math.js"></script>
+    <script src="vendor/docx-html.js"></script>
+
+    <script src="docx-exporter.js"></script>
     <script src="category.js"></script>
     <script src="category-page.js"></script>
     <script src="batch.js"></script>

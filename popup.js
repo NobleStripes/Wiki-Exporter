@@ -44,31 +44,61 @@ document.getElementById("export")
         );
       }
 
-      const converter = new TurndownService({
-        headingStyle: "atx",
-        bulletListMarker: "-",
-        codeBlockStyle: "fenced"
-      });
-
-      converter.use(turndownPluginGfm.gfm);
-
-      const markdown = [
-        `# ${article.title}`,
-        `Source: ${article.url}`,
-        `Retrieved: ${new Date().toISOString()}`,
-        "",
-        converter.turndown(article.html)
-      ].join("\n\n");
+      const exportFormat =
+        document.getElementById("export-format").value;
 
       const filename = article.title
-        .replace(/[<>:"/\\|?*]/g, "_")
-        .trim();
+        .replace(/[<>:"/\|?*]/g, "_")
+        .trim()
+        .slice(0, 120) || "Article";
 
-      downloadFile(
-        markdown,
-        `${filename}.md`,
-        "text/markdown"
-      );
+      if (exportFormat === "docx") {
+
+        status.textContent =
+          "Generating Word document...";
+
+        const blob = await WikiDocx.createDocument([
+          {
+            ...article,
+            retrievedAt: new Date().toISOString()
+          }
+        ]);
+
+        downloadFile(
+          blob,
+          `${filename}.docx`
+        );
+
+      } else {
+
+        const converter = new TurndownService({
+
+          headingStyle: "atx",
+          bulletListMarker: "-",
+          codeBlockStyle: "fenced"
+
+        });
+
+        converter.use(turndownPluginGfm.gfm);
+
+        const markdown = [
+
+          `# ${article.title}`,
+          `Source: ${article.url}`,
+          `Retrieved: ${new Date().toISOString()}`,
+          "",
+          converter.turndown(article.html)
+
+        ].join("\n\n");
+
+        downloadFile(
+          markdown,
+          `${filename}.md`,
+          "text/markdown"
+        );
+
+      }
+
 
       status.textContent = "Export generated.";
 
@@ -137,7 +167,17 @@ function extractArticle() {
   };
 }
 
-function downloadFile(content, filename, type) {
+function downloadFile(
+  content,
+  filename,
+  type = "text/markdown"
+) {
+
+  const Blob = content instanceof Blob
+    ? content
+    : new Blob([content], {
+      type: `${type};charset=utf-8`
+    });
 
   const blob = new Blob([content], {
     type: `${type};charset=utf-8`
