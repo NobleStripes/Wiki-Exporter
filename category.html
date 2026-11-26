@@ -1,12 +1,9 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Wiki Exporter — Category Export</title>
 
@@ -43,6 +40,25 @@
             <p id="status" role="status"></p>
 
             <div id="article-list"></div>
+
+            <div class="toolbar">
+
+                <button id="export-batch" disabled>
+                    Export Selected Articles
+                </button>
+
+                <button id="cancel-batch" class="secondary" disabled>
+                    Cancel Export
+                </button>
+
+            </div>
+
+            <progress id="batch-progress" value="0" max="100" hidden></progress>
+
+            <p id="batch-status" role="status"></p>
+
+            <pre id="batch-report" hidden></pre>
+
 
         </div>
 

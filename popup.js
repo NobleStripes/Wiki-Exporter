@@ -1,4 +1,3 @@
-
 document.getElementById("export")
   .addEventListener("click", async () => {
 
@@ -7,25 +6,25 @@ document.getElementById("export")
     try {
       status.textContent = "Extracting article...";
 
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true
-    });
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      });
 
-    if (tab.url && isCategoryPage(tab.url)) {
+      if (tab.url && isCategoryPage(tab.url)) {
 
-    const params = new URLSearchParams({
-        url: tab.url
-    });
+        const params = new URLSearchParams({
+          url: tab.url
+        });
 
-    await chrome.tabs.create({
-        url: chrome.runtime.getURL(
+        await chrome.tabs.create({
+          url: chrome.runtime.getURL(
             "category.html?" + params.toString()
-        )
-    });
+          )
+        });
 
-    return;
-}
+        return;
+      }
 
       if (!tab?.id) {
         throw new Error("No active tab.");
