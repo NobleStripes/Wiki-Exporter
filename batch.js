@@ -254,11 +254,13 @@
     // Download combined Markdown
     // ========================================
 
-    function downloadMarkdown(content, filename) {
+    function downloadFile(content, filename) {
 
-        const blob = new Blob([content], {
-            type: "text/markdown;charset=utf-8"
-        });
+        const blob = content instanceof Blob
+            ? content
+            : new Blob([content], {
+                type: "text/markdown;charset=utf-8"
+            });
 
         const url = URL.createObjectURL(blob);
 
