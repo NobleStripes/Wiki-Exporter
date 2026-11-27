@@ -143,11 +143,66 @@
 
                         <option value="desc">Z–A</option>
 
+                        <option value="relevance">Best Match</option>
+
                     </select>
 
                 </div>
 
             </div>
+
+
+            <div id="search-review-controls">
+
+                <button id="clear-search" class="secondary" disabled>
+                    Clear Search
+                </button>
+
+                <label class="review-option">
+
+                    <input type="checkbox" id="selected-only" disabled>
+
+                    Show Selected Only
+
+                </label>
+
+            </div>
+
+            <p id="search-error" role="status" hidden></p>
+
+            <details id="search-help">
+
+                <summary>Search Syntax Help</summary>
+
+                <div class="syntax-guide">
+
+                    <code>fire manipulation</code>
+                    <span>Match both keywords</span>
+
+                    <code>fire OR ice</code>
+                    <span>Match either keyword</span>
+
+                    <code>fire -immunity</code>
+                    <span>Exclude immunity</span>
+
+                    <code>fire NOT immunity</code>
+                    <span>Alternative exclusion syntax</span>
+
+                    <code>"fire manipulation"</code>
+                    <span>Match an exact phrase</span>
+
+                    <code>fire OR ice -resistance</code>
+                    <span>Exclude resistance from both results</span>
+
+                </div>
+
+                <p class="search-hint">
+                    Use uppercase AND, OR and NOT.
+                    Fuzzy search applies to ordinary keywords,
+                    not exact phrases or exclusions.
+                </p>
+
+            </details>
 
             <div class="toolbar" id="selection-toolbar">
 
@@ -165,6 +220,10 @@
 
                 <button id="deselect-filtered" class="secondary" disabled>
                     Deselect Filtered
+                </button>
+
+                <button id="invert-selection" class="secondary" disabled>
+                    Invert All Selections
                 </button>
 
             </div>

@@ -641,3 +641,84 @@ footer {
     color: var(--text-secondary);
     font-size: 12px;
 }
+
+/* ========================================
+   v0.7.1 — Advanced Search
+   ======================================== */
+
+#search-review-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 12px 0;
+}
+
+.review-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#search-error {
+    padding: 10px 12px;
+    border: 1px solid var(--error);
+    border-radius: var(--radius);
+    color: var(--error);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+#search-error[hidden] {
+    display: none;
+}
+
+#article-search[aria-invalid="true"] {
+    border-color: var(--error);
+}
+
+/* Search syntax documentation */
+
+#search-help {
+    margin: 12px 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+#search-help summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.syntax-guide {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+    font-size: 12px;
+}
+
+.syntax-guide code {
+    padding: 6px 8px;
+    background: var(--surface-hover);
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+}
+
+.syntax-guide span {
+    align-self: center;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 600px) {
+
+    .syntax-guide {
+        grid-template-columns: 1fr;
+    }
+
+}

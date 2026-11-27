@@ -17,7 +17,7 @@ const WikiSettings = (() => {
     const allowed = {
         format: ["md", "docx"],
         output: ["combined", "separate"],
-        sort: ["asc", "desc"],
+        sort: ["asc", "desc", "relevance"],
         searchMode: ["exact", "fuzzy"]
     };
 

@@ -52,6 +52,18 @@
     const separateLabel =
         document.getElementById("separate-label");
 
+    const selectedOnly =
+        document.getElementById("selected-only");
+
+    const clearSearchButton =
+        document.getElementById("clear-search");
+
+    const invertButton =
+        document.getElementById("invert-selection");
+
+    const searchError =
+        document.getElementById("search-error");
+
     const collator = new Intl.Collator(undefined, {
         sensitivity: "base",
         numeric: true
@@ -60,35 +72,92 @@
     let controller = null;
 
     // ========================================
-    // Article Search, Sorting and Selection
+    // Advanced Article Search
     // ========================================
+
+    function getSearch() {
+
+        return WikiSearch.compile(
+            searchInput.value,
+            searchMode.value
+        );
+    }
+
+    function scoreRow(row, query) {
+
+        return query.score(
+
+            row.dataset.title ||
+            row.textContent.trim(),
+
+            row.dataset.host || ""
+
+        );
+    }
+
+    function buildSearchView() {
+
+        const query = getSearch();
+
+        const rows = [
+            ...articleList.querySelectorAll("label")
+        ];
+
+        const scores = new Map(
+            rows.map(row => [
+                row,
+                scoreRow(row, query)
+            ])
+        );
+
+        rows.sort((a, b) => {
+
+            if (sortSelect.value === "relevance") {
+
+                const difference =
+                    (scores.get(b) ?? -1) -
+                    (scores.get(a) ?? -1);
+
+                if (difference !== 0) {
+                    return difference;
+                }
+            }
+
+            const direction =
+                sortSelect.value === "desc" ? -1 : 1;
+
+            return direction * collator.compare(
+
+                a.dataset.title ||
+                a.textContent.trim(),
+
+                b.dataset.title ||
+                b.textContent.trim()
+
+            );
+        });
+
+        return { query, rows, scores };
+    }
 
     function getArticleRows() {
 
-        const rows = [...articleList.querySelectorAll("label")];
-
-        const direction =
-            sortSelect.value === "desc" ? -1 : 1;
-
-        return rows.sort((a, b) => {
-
-            return direction * collator.compare(
-                a.dataset.title || a.textContent.trim(),
-                b.dataset.title || b.textContent.trim()
-            );
-
-        });
+        return buildSearchView().rows;
     }
 
     // ========================================
-    // Retrieve selected articles
+    // Selected Article URLs
     // ========================================
 
-    function getSelectedArticles() {
+    function getSelectedArticles(
+        rows = getArticleRows()
+    ) {
 
-        const selected = getArticleRows()
+        const selected = rows
             .map(row =>
-                row.querySelector('input[type="checkbox"]')
+                row.querySelector(
+                    'input[type="checkbox"]'
+                )
             )
             .filter(box => box?.checked)
             .map(box => box.value);
@@ -97,46 +166,66 @@
     }
 
     // ========================================
-    // Filter and sort visible articles
+    // Apply Search and Review Mode
     // ========================================
 
-    function applyArticleView() {
+    function applyArticleView(
+        view = buildSearchView()
+    ) {
 
-        const query = searchInput.value.trim();
-        const mode = searchMode.value;
-
-        const rows = getArticleRows();
+        const { query, rows, scores } = view;
 
         rows.forEach((row, index) => {
 
-            const title =
-                row.dataset.title ||
-                row.textContent.trim();
+            const checked = row.querySelector(
+                'input[type="checkbox"]'
+            )?.checked;
 
-            const host =
-                row.dataset.host || "";
+            if (selectedOnly.checked) {
 
-            row.hidden = !WikiSearch.matches(
-                title,
-                host,
-                query,
-                mode
-            );
+                // Review all selected articles,
+                // independently of the search query.
+
+                row.hidden = !checked;
+
+            } else if (query.error) {
+
+                // Invalid syntax must not erase
+                // the existing selection.
+
+                row.hidden = false;
+
+            } else {
+
+                row.hidden = scores.get(row) === null;
+
+            }
 
             row.style.order = index;
-
         });
+
+        searchError.hidden = !query.error;
+
+        searchError.textContent =
+            query.error || "";
+
+        searchInput.setAttribute(
+            "aria-invalid",
+            String(Boolean(query.error))
+        );
 
         return rows;
     }
 
     // ========================================
-    // Synchronize interface controls
+    // Synchronize Controls
     // ========================================
 
     function syncControls() {
 
-        const rows = applyArticleView();
+        const view = buildSearchView();
+
+        const rows = applyArticleView(view);
 
         const visibleRows = rows.filter(
             row => !row.hidden
@@ -145,13 +234,19 @@
         const total = rows.length;
 
         const selected =
-            getSelectedArticles().length;
+            getSelectedArticles(rows).length;
 
         const visibleSelected = visibleRows.filter(
             row => row.querySelector("input")?.checked
         ).length;
 
+        const hiddenSelected =
+            selected - visibleSelected;
+
         const exporting = controller !== null;
+
+        const locked =
+            exporting || WikiCollection.busy;
 
         const overLimit =
             selected > WikiRequest.MAX_BATCH;
@@ -161,6 +256,12 @@
         selectionCount.textContent =
             `${visibleRows.length} visible · ` +
             `${selected} of ${total} selected`;
+
+        if (hiddenSelected > 0) {
+
+            selectionCount.textContent +=
+                ` · ${hiddenSelected} selected outside view`;
+        }
 
         batchLimit.textContent =
             `${selected} / ${WikiRequest.MAX_BATCH} batch limit`;
@@ -174,61 +275,101 @@
 
             batchLimit.textContent +=
                 " — reduce selection";
-
         }
 
+        // Empty results message.
+
         filterEmpty.hidden =
-            total === 0 || visibleRows.length > 0;
+            total === 0 ||
+            visibleRows.length > 0 ||
+            Boolean(view.query.error);
+
+        filterEmpty.textContent =
+            selectedOnly.checked
+
+                ? "No selected articles."
+
+                : "No matching articles.";
 
         // Export controls.
 
         exportButton.disabled =
-            exporting ||
-            WikiCollection.busy ||
+            locked ||
             selected === 0 ||
-            overLimit;
+            overLimit ||
+            Boolean(view.query.error);
 
         cancelButton.disabled =
-            !exporting || controller.signal.aborted;
+            !exporting ||
+            controller.signal.aborted;
 
-        // Global selection controls.
+        // Global selection.
 
         selectAllButton.disabled =
-            exporting || total === 0 ||
+            locked ||
+            total === 0 ||
             selected === total;
 
         selectNoneButton.disabled =
-            exporting || selected === 0;
+            locked ||
+            selected === 0;
 
-        // Filtered selection controls.
+        invertButton.disabled =
+            locked ||
+            total === 0;
+
+        // Filtered selection.
 
         selectFilteredButton.disabled =
-            exporting ||
+            locked ||
+            Boolean(view.query.error) ||
             visibleRows.length === 0 ||
             visibleSelected === visibleRows.length;
 
         deselectFilteredButton.disabled =
-            exporting || visibleSelected === 0;
+            locked ||
+            Boolean(view.query.error) ||
+            visibleSelected === 0;
 
-        // Search and sorting controls.
+        // Search controls.
 
         searchInput.disabled =
-            exporting || total === 0;
+            locked || total === 0;
 
         searchMode.disabled =
-            exporting || total === 0;
+            locked || total === 0;
 
         sortSelect.disabled =
-            exporting || total === 0;
+            locked || total === 0;
 
-        // Lock output preferences during export.
+        selectedOnly.disabled =
+            locked || total === 0;
+
+        clearSearchButton.disabled =
+            locked ||
+            (!searchInput.value &&
+                !selectedOnly.checked);
+
+        // Prevent selection changes during extraction
+        // or collection loading.
+
+        rows.forEach(row => {
+
+            const checkbox = row.querySelector(
+                'input[type="checkbox"]'
+            );
+
+            if (checkbox) {
+                checkbox.disabled = locked;
+            }
+        });
 
         formatOptions.disabled = exporting;
         outputOptions.disabled = exporting;
     }
 
     // ========================================
-    // Bulk selection
+    // Bulk Selection
     // ========================================
 
     function setArticlesChecked(
@@ -236,11 +377,9 @@
         filteredOnly = false
     ) {
 
-        if (controller) return;
+        if (controller || WikiCollection.busy) return;
 
-        const rows = getArticleRows();
-
-        for (const row of rows) {
+        for (const row of getArticleRows()) {
 
             if (filteredOnly && row.hidden) {
                 continue;
@@ -251,57 +390,35 @@
             );
 
             if (checkbox) {
-                checkbox.checked = checked;
-            }
 
+                checkbox.checked =
+                    checked === "invert"
+
+                        ? !checkbox.checked
+
+                        : checked;
+            }
         }
 
         syncControls();
     }
 
     // ========================================
-    // Selection event listeners
-    // ========================================
-
-    selectAllButton.addEventListener("click", () => {
-
-        setArticlesChecked(true);
-
-    });
-
-    selectNoneButton.addEventListener("click", () => {
-
-        setArticlesChecked(false);
-
-    });
-
-    selectFilteredButton.addEventListener("click", () => {
-
-        setArticlesChecked(true, true);
-
-    });
-
-    deselectFilteredButton.addEventListener("click", () => {
-
-        setArticlesChecked(false, true);
-
-    });
-
-    // ========================================
     // Automatic Keyword Selection
     // ========================================
 
-    function selectSearchMatches(rows = getArticleRows()) {
+    function selectSearchMatches(
+        rows = articleList.querySelectorAll("label")
+    ) {
 
         if (controller) return;
 
-        const query = searchInput.value.trim();
+        const query = getSearch();
 
-        // Clearing the search retains the selection.
+        // Preserve selections when clearing search
+        // or typing an incomplete expression.
 
-        if (!query) return;
-
-        applyArticleView();
+        if (query.empty || query.error) return;
 
         for (const row of rows) {
 
@@ -311,15 +428,49 @@
 
             if (checkbox) {
 
-                // Select matching articles only.
-
-                checkbox.checked = !row.hidden;
+                checkbox.checked =
+                    scoreRow(row, query) !== null;
 
             }
         }
     }
 
+    // ========================================
+    // Selection Event Listeners
+    // ========================================
+
+    selectAllButton.addEventListener(
+        "click",
+        () => setArticlesChecked(true)
+    );
+
+    selectNoneButton.addEventListener(
+        "click",
+        () => setArticlesChecked(false)
+    );
+
+    selectFilteredButton.addEventListener(
+        "click",
+        () => setArticlesChecked(true, true)
+    );
+
+    deselectFilteredButton.addEventListener(
+        "click",
+        () => setArticlesChecked(false, true)
+    );
+
+    invertButton.addEventListener(
+        "click",
+        () => setArticlesChecked("invert")
+    );
+
+    // ========================================
+    // Search Event Listeners
+    // ========================================
+
     searchInput.addEventListener("input", () => {
+
+        selectedOnly.checked = false;
 
         selectSearchMatches();
 
@@ -334,6 +485,8 @@
             searchMode.value
         );
 
+        selectedOnly.checked = false;
+
         selectSearchMatches();
 
         syncControls();
@@ -342,13 +495,40 @@
 
     sortSelect.addEventListener("change", () => {
 
-        WikiSettings.set("sort", sortSelect.value);
+        WikiSettings.set(
+            "sort",
+            sortSelect.value
+        );
 
         syncControls();
 
     });
 
-    articleList.addEventListener("change", syncControls);
+    selectedOnly.addEventListener(
+        "change",
+        syncControls
+    );
+
+    clearSearchButton.addEventListener("click", () => {
+
+        searchInput.value = "";
+
+        selectedOnly.checked = false;
+
+        // Clearing search changes visibility,
+        // not the selected articles.
+
+        syncControls();
+
+        searchInput.focus();
+
+    });
+
+    articleList.addEventListener(
+        "change",
+        syncControls
+    );
+
     document.addEventListener(
         "collectionchange",
         syncControls
@@ -654,6 +834,16 @@
     // ========================================
 
     async function exportBatch() {
+
+        const activeQuery = getSearch();
+
+        if (activeQuery.error) {
+
+            status.textContent =
+                "Correct or clear the search expression before exporting.";
+
+            return;
+        }
 
         if (controller || WikiCollection.busy) return;
 
