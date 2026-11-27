@@ -39,6 +39,42 @@
 
             <p id="status" role="status"></p>
 
+            <div id="filter-controls">
+
+                <div class="filter-field">
+
+                    <label for="article-search">
+                        Search Articles
+                    </label>
+
+                    <input
+                        type="search"
+                        id="article-search"
+                        placeholder="Filter article titles..."
+                        autocomplete="off"
+                        disabled
+                    >
+
+                </div>
+
+                <div class="sort-field">
+
+                    <label for="article-sort">
+                        Sort Order
+                    </label>
+
+                    <select id="article-sort" disabled>
+
+                        <option value="asc">A–Z</option>
+
+                        <option value="desc">Z–A</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
             <div class="toolbar" id="selection-toolbar">
 
                 <button id="select-all"
@@ -53,11 +89,35 @@
                     Select None
                 </button>
 
+                <button id="select-filtered"
+                        class="secondary"
+                        disabled>
+                    Select Filtered
+                </button>
+
+                <button id="deselect-filtered"
+                        class="secondary"
+                        disabled>
+                    Deselect Filtered
+                </button>
+
+            </div>
+
+            <div id="selection-information">
+
                 <span id="selection-count" role="status">
                     0 of 0 selected
                 </span>
 
+                <span id="batch-limit">
+                    0 / 100 batch limit
+                </span>
+
             </div>
+
+            <p id="filter-empty" hidden>
+                No matching articles.
+            </p>
 
             <div id="article-list"></div>
 
@@ -82,13 +142,28 @@
                 <legend>Output Mode</legend>
 
                 <label class="export-option">
-                    <input type="radio" name="output-mode" value="combined" checked>
-                    Combined Markdown document (.md)
+
+                    <input type="radio"
+                           name="output-mode"
+                           value="combined"
+                           checked>
+
+                    <span id="combined-label">
+                        Combined document (.md)
+                    </span>
+
                 </label>
 
                 <label class="export-option">
-                    <input type="radio" name="output-mode" value="separate">
-                    Separate Markdown files (.zip)
+
+                    <input type="radio"
+                           name="output-mode"
+                           value="separate">
+
+                    <span id="separate-label">
+                        Separate .md files (.zip)
+                    </span>
+
                 </label>
 
             </fieldset>
@@ -129,6 +204,7 @@
     <script src="vendor/docx-html.js"></script>
 
     <script src="docx-exporter.js"></script>
+    <script src="settings.js"></script>
     <script src="request.js"></script>
     <script src="category.js"></script>
     <script src="category-page.js"></script>

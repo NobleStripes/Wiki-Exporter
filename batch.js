@@ -26,89 +26,259 @@
     const selectionCount =
         document.getElementById("selection-count");
 
+    const searchInput =
+        document.getElementById("article-search");
+
+    const sortSelect =
+        document.getElementById("article-sort");
+
+    const selectFilteredButton =
+        document.getElementById("select-filtered");
+
+    const deselectFilteredButton =
+        document.getElementById("deselect-filtered");
+
+    const batchLimit =
+        document.getElementById("batch-limit");
+
+    const filterEmpty =
+        document.getElementById("filter-empty");
+
+    const combinedLabel =
+        document.getElementById("combined-label");
+
+    const separateLabel =
+        document.getElementById("separate-label");
+
+    const collator = new Intl.Collator(undefined, {
+        sensitivity: "base",
+        numeric: true
+    });
+
     let controller = null;
 
     // ========================================
-    // Article selection
+    // Article Search, Sorting and Selection
+    // ========================================
+
+    function getArticleRows() {
+
+        const rows = [...articleList.querySelectorAll("label")];
+
+        const direction =
+            sortSelect.value === "desc" ? -1 : 1;
+
+        return rows.sort((a, b) => {
+
+            return direction * collator.compare(
+                a.textContent.trim(),
+                b.textContent.trim()
+            );
+
+        });
+    }
+
+    // ========================================
+    // Retrieve selected articles
     // ========================================
 
     function getSelectedArticles() {
-        const checkboxes = articleList.querySelectorAll(
-            'input[type="checkbox"]:checked'
-        );
 
-        return [...new Set(
-            [...checkboxes].map(box => box.value)
-        )];
+        const selected = getArticleRows()
+            .map(row =>
+                row.querySelector('input[type="checkbox"]')
+            )
+            .filter(box => box?.checked)
+            .map(box => box.value);
+
+        return [...new Set(selected)];
     }
+
+    // ========================================
+    // Filter and sort visible articles
+    // ========================================
+
+    function applyArticleView() {
+
+        const query = searchInput.value
+            .trim()
+            .toLocaleLowerCase();
+
+        const rows = getArticleRows();
+
+        rows.forEach((row, index) => {
+
+            const title = row.textContent
+                .trim()
+                .toLocaleLowerCase();
+
+            row.hidden = !title.includes(query);
+
+            row.style.order = index;
+
+        });
+
+        return rows;
+    }
+
+    // ========================================
+    // Synchronize interface controls
+    // ========================================
 
     function syncControls() {
 
-        const checkboxes = articleList.querySelectorAll(
-            'input[type="checkbox"]'
+        const rows = applyArticleView();
+
+        const visibleRows = rows.filter(
+            row => !row.hidden
         );
 
-        const total = checkboxes.length;
+        const total = rows.length;
 
-        const selected = articleList.querySelectorAll(
-            'input[type="checkbox"]:checked'
+        const selected =
+            getSelectedArticles().length;
+
+        const visibleSelected = visibleRows.filter(
+            row => row.querySelector("input")?.checked
         ).length;
 
         const exporting = controller !== null;
 
-        // Update selection counter.
+        const overLimit =
+            selected > WikiRequest.MAX_BATCH;
+
+        // Selection statistics.
+
         selectionCount.textContent =
+            `${visibleRows.length} visible · ` +
             `${selected} of ${total} selected`;
 
+        batchLimit.textContent =
+            `${selected} / ${WikiRequest.MAX_BATCH} batch limit`;
+
+        batchLimit.classList.toggle(
+            "over-limit",
+            overLimit
+        );
+
+        if (overLimit) {
+
+            batchLimit.textContent +=
+                " — reduce selection";
+
+        }
+
+        filterEmpty.hidden =
+            total === 0 || visibleRows.length > 0;
+
         // Export controls.
+
         exportButton.disabled =
-            exporting || selected === 0;
+            exporting || selected === 0 || overLimit;
 
         cancelButton.disabled =
-            !exporting;
+            !exporting || controller.signal.aborted;
 
-        // Selection controls.
+        // Global selection controls.
+
         selectAllButton.disabled =
-            exporting || total === 0 || selected === total;
+            exporting || total === 0 ||
+            selected === total;
 
         selectNoneButton.disabled =
             exporting || selected === 0;
+
+        // Filtered selection controls.
+
+        selectFilteredButton.disabled =
+            exporting ||
+            visibleRows.length === 0 ||
+            visibleSelected === visibleRows.length;
+
+        deselectFilteredButton.disabled =
+            exporting || visibleSelected === 0;
+
+        // Search and sorting controls.
+
+        searchInput.disabled =
+            exporting || total === 0;
+
+        sortSelect.disabled =
+            exporting || total === 0;
+
+        // Lock output preferences during export.
+
+        formatOptions.disabled = exporting;
+        outputOptions.disabled = exporting;
     }
 
     // ========================================
-    // Article Selection Controls
+    // Bulk selection
     // ========================================
 
-    function setAllArticles(checked) {
+    function setArticlesChecked(
+        checked,
+        filteredOnly = false
+    ) {
 
         if (controller) return;
 
-        const checkboxes = articleList.querySelectorAll(
-            'input[type="checkbox"]'
-        );
+        const rows = getArticleRows();
 
-        checkboxes.forEach(box => {
+        for (const row of rows) {
 
-            box.checked = checked;
+            if (filteredOnly && row.hidden) {
+                continue;
+            }
 
-        });
+            const checkbox = row.querySelector(
+                'input[type="checkbox"]'
+            );
+
+            if (checkbox) {
+                checkbox.checked = checked;
+            }
+
+        }
 
         syncControls();
     }
 
-    // Select all articles.
+    // ========================================
+    // Selection event listeners
+    // ========================================
 
     selectAllButton.addEventListener("click", () => {
 
-        setAllArticles(true);
+        setArticlesChecked(true);
 
     });
 
-    // Deselect all articles.
-
     selectNoneButton.addEventListener("click", () => {
 
-        setAllArticles(false);
+        setArticlesChecked(false);
+
+    });
+
+    selectFilteredButton.addEventListener("click", () => {
+
+        setArticlesChecked(true, true);
+
+    });
+
+    deselectFilteredButton.addEventListener("click", () => {
+
+        setArticlesChecked(false, true);
+
+    });
+
+    searchInput.addEventListener("input", syncControls);
+
+    sortSelect.addEventListener("change", () => {
+
+        WikiSettings.set("sort", sortSelect.value);
+
+        syncControls();
 
     });
 
