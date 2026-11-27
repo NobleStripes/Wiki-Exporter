@@ -29,6 +29,8 @@ const WikiLinks = (() => {
         return null;
     }
     function protectedLink(a,u,article) {
+        // Explicitly retained media links are controlled separately from body links.
+        if(a.getAttribute("data-wiki-exporter-media")==="true")return true;
         if(a.closest('.references,.reference,.mw-references-wrap,.reflist,.citation,.cite,.mw-cite-backlink,[role="doc-biblioref"],[role="doc-noteref"],[role="doc-backlink"],[role="doc-endnotes"],[role="doc-footnote"],cite,.license-description,.license,[rel~="license"]'))return true;
         if(a.matches('.reference-text,.external.autonumber,[rel~="license"]'))return true;
         if(/^#?(cite_(note|ref)[-_]|ref[-_]|fn[-_])/i.test(decoded(u.hash.slice(1))))return true;

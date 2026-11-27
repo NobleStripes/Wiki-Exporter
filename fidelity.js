@@ -53,6 +53,7 @@ const WikiFidelity = (() => {
             ...(license?.url ? [["License URL", license.url]] : []),
             ...(license?.source ? [["License evidence", license.source]] : []),
             ...(article.linkMode ? [["Body link policy", article.linkMode === "local" ? "Local HTML navigation where targets exist" : article.linkMode === "wiki" ? "Strip ordinary wiki links" : article.linkMode === "inline" ? "Strip ordinary inline links" : "Retain links"]] : []),
+            ["Media link policy", WikiMedia.labels[WikiMedia.normalize(article.mediaMode)]],
             ["Changes", "Reformatted by Wiki Exporter; website interface elements removed; images represented by links or descriptions."],
             ["Rights note", "The declared wiki license may not cover third-party text or media; verify the original source before redistribution."]
         ];
@@ -190,25 +191,15 @@ const WikiFidelity = (() => {
             } else link.setAttribute("href", href);
         }
 
-        // Represent images by source links rather than fetching or embedding bytes.
-        for (const image of [...root.querySelectorAll("img")]) {
-            const href = httpURL(image.getAttribute("data-src"), article.url) || httpURL(image.getAttribute("src"), article.url);
-            const description = image.getAttribute("alt") || image.getAttribute("title") || "Image";
-            const link = document.createElement(href && !image.closest("a") ? "a" : "span");
-            link.textContent = `[Image: ${description}${href && image.closest("a") ? `; ${href}` : ""}]`;
-            if (href) {
-                stats.imagesWithURL++;
-                if (link.localName === "a") link.setAttribute("href", href);
-            }
-            image.replaceWith(link);
-        }
+        // Gallery/media link policy operates before ordinary article link handling.
+        warnings.push(...WikiMedia.apply(root, article, stats));
 
         convertInfoboxes(root, stats);
         stats.preparedTables = root.querySelectorAll("table").length;
         stats.complexTables = [...root.querySelectorAll("table")].filter(isComplexTable).length;
         if (stats.infoboxRowsConverted < stats.infoboxRows) warnings.push("Some portable infobox rows could not be safely converted; original markup retained for conversion.");
         if (stats.complexTables) warnings.push("Complex or headerless tables: Markdown preserves safe HTML; Word formatting may differ from the source.");
-        if (stats.images) warnings.push("Images are represented by links or descriptions; image bytes are not included.");
+        if (stats.images) warnings.push("Images are represented by links or descriptions according to the media policy; image bytes are not included.");
         if (stats.imagesWithURL < stats.images) warnings.push("Some images lack a usable HTTP(S) source URL.");
         if (!article.license) warnings.push("Source license not verified.");
         if (!revision) warnings.push("Revision ID unavailable; permanent revision link not generated.");

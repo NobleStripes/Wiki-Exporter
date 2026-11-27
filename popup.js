@@ -17,6 +17,9 @@ formatSelect.addEventListener("change", () => {
 
 });
 
+const mediaModeSelect = document.getElementById("media-mode");
+mediaModeSelect.value = WikiSettings.get("mediaMode");
+mediaModeSelect.addEventListener("change",()=>WikiSettings.set("mediaMode",mediaModeSelect.value));
 const linkModeSelect = document.getElementById("link-mode");
 linkModeSelect.value = WikiSettings.get("linkMode");
 linkModeSelect.addEventListener("change",()=>WikiSettings.set("linkMode",linkModeSelect.value));
@@ -71,6 +74,7 @@ document.getElementById("export")
       article.license = WikiFidelity.rights(
         article.licenseText, article.licenseURL, "Wiki license notice (open page)"
       );
+      article.mediaMode = WikiMedia.normalize(mediaModeSelect.value);
       article.prepared = WikiFidelity.prepare(article);
       if (!article.prepared.hasText) throw new Error("Prepared article is empty.");
 

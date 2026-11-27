@@ -12,7 +12,8 @@ const WikiSettings = (() => {
         output: "combined",
         sort: "asc",
         searchMode: "exact",
-        linkMode: "retain"
+        linkMode: "retain",
+        mediaMode: "captions"
     };
 
     const allowed = {
@@ -20,7 +21,8 @@ const WikiSettings = (() => {
         output: ["combined", "separate"],
         sort: ["asc", "desc", "relevance"],
         searchMode: ["exact", "fuzzy"],
-        linkMode: ["retain", "wiki", "inline", "local"]
+        linkMode: ["retain", "wiki", "inline", "local"],
+        mediaMode: ["captions", "retain"]
     };
 
     function get(name) {

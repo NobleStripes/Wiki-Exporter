@@ -754,3 +754,7 @@ footer {
 /* v0.9.1 — Article link preferences */
 #link-mode { margin: 6px 0; }
 #archive-options label[for="link-mode"], .popup-page label[for="link-mode"] { display: block; font-weight: 600; margin-top: 8px; font-size: 13px; }
+
+/* v0.9.2 — Gallery and image links */
+#media-mode { margin: 6px 0; }
+#archive-options label[for="media-mode"], .popup-page label[for="media-mode"] { display:block; font-weight:600; margin-top:8px; font-size:13px; }

@@ -47,7 +47,13 @@
     <option value="json">Structured JSON (.json)</option>
   </select>
 
-            <label for="link-mode">Article link handling</label>
+            <label for="media-mode">Gallery and image links</label>
+<select id="media-mode">
+    <option value="captions">Captions and descriptions only</option>
+    <option value="retain">Retain media links</option>
+</select>
+<p class="search-hint">No image downloads. Gallery captions and identifiable references are preserved.</p>
+<label for="link-mode">Article link handling</label>
             <select id="link-mode">
                 <option value="retain">Retain All Links</option>
                 <option value="wiki">Strip Wiki Links</option>
@@ -73,7 +79,8 @@
   <script src="vendor/docx-math.js"></script>
   <script src="vendor/docx-html.js"></script>
 
-  <script src="fidelity.js"></script>
+  <script src="media.js"></script>
+    <script src="fidelity.js"></script>
   <script src="links.js"></script>
     <script src="archive.js"></script>
     <script src="docx-exporter.js"></script>
