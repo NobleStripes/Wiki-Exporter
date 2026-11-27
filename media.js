@@ -73,6 +73,7 @@ const WikiMedia = (() => {
         }
         // Also recognize gallery subpages and file links that do not contain a thumbnail.
         for(const a of [...root.querySelectorAll("a")]) {
+            if(a.getAttribute("data-wiki-exporter-video")==="true")continue;
             const u=safeURL(a.getAttribute("href"),article.url);
             const kind=mediaKind(u);
             if(!kind&&!thumbnailAnchors.has(a)&&!/^\[Image(?:[:\]])/i.test(a.textContent.trim()))continue;

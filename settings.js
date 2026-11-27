@@ -13,7 +13,8 @@ const WikiSettings = (() => {
         sort: "asc",
         searchMode: "exact",
         linkMode: "retain",
-        mediaMode: "captions"
+        mediaMode: "captions",
+        videoMode: "captions"
     };
 
     const allowed = {
@@ -22,7 +23,8 @@ const WikiSettings = (() => {
         sort: ["asc", "desc", "relevance"],
         searchMode: ["exact", "fuzzy"],
         linkMode: ["retain", "wiki", "inline", "local"],
-        mediaMode: ["captions", "retain"]
+        mediaMode: ["captions", "retain"],
+        videoMode: ["captions", "retain"]
     };
 
     function get(name) {

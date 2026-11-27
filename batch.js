@@ -21,6 +21,7 @@
     const combinedManifest = document.getElementById("combined-manifest");
     const linkModeSelect = document.getElementById("link-mode");
     const mediaModeSelect = document.getElementById("media-mode");
+    const videoModeSelect = document.getElementById("video-mode");
 
     const selectAllButton =
         document.getElementById("select-all");
@@ -620,6 +621,8 @@
     restorePreferences();
     linkModeSelect.value = WikiSettings.get("linkMode");
     mediaModeSelect.value = WikiSettings.get("mediaMode");
+    videoModeSelect.value = WikiSettings.get("videoMode");
+    videoModeSelect.addEventListener("change",()=>WikiSettings.set("videoMode",videoModeSelect.value));
     mediaModeSelect.addEventListener("change",()=>WikiSettings.set("mediaMode",mediaModeSelect.value));
     linkModeSelect.addEventListener("change",()=>WikiSettings.set("linkMode",linkModeSelect.value));
     document.addEventListener("collectionrestored", () => {
@@ -778,6 +781,7 @@
         const requestedLinkMode = WikiLinks.normalize(linkModeSelect.value);
         const linkMode = WikiLinks.effective(requestedLinkMode,exportFormat);
         const mediaMode = WikiMedia.normalize(mediaModeSelect.value);
+        const videoMode = WikiVideo.normalize(videoModeSelect.value);
 
         if (!articles.length) {
             status.textContent = "No articles selected.";
@@ -910,6 +914,7 @@
                         }
 
                         article.mediaMode = mediaMode;
+                        article.videoMode = videoMode;
                         article.prepared = WikiFidelity.prepare(article);
                         if (licenseIssue) article.prepared.warnings.push(licenseIssue);
                         if (!article.prepared.hasText) {
@@ -999,7 +1004,7 @@
                     collection: categoryName, sources: context.sources,
                     status: partial ? "partial" : "complete", selected: articles.length,
                     duplicates, unprocessed, stopReason: stopReason || null, failed,
-                    requestedLinkMode, linkMode, mediaMode
+                    requestedLinkMode, linkMode, mediaMode, videoMode
                 };
                 summary.push(`Body links: ${WikiLinks.labels[linkMode]}${requestedLinkMode !== linkMode ? " (HTML-only option falls back to retain)" : ""}`);
                 // Preview is local and uses the same prepared content as the export.

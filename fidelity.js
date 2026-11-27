@@ -54,7 +54,8 @@ const WikiFidelity = (() => {
             ...(license?.source ? [["License evidence", license.source]] : []),
             ...(article.linkMode ? [["Body link policy", article.linkMode === "local" ? "Local HTML navigation where targets exist" : article.linkMode === "wiki" ? "Strip ordinary wiki links" : article.linkMode === "inline" ? "Strip ordinary inline links" : "Retain links"]] : []),
             ["Media link policy", WikiMedia.labels[WikiMedia.normalize(article.mediaMode)]],
-            ["Changes", "Reformatted by Wiki Exporter; website interface elements removed; images represented by links or descriptions."],
+            ["Video link policy", WikiVideo.labels[WikiVideo.normalize(article.videoMode)]],
+            ["Changes", "Reformatted by Wiki Exporter; website interface elements removed; images and videos represented by links or descriptions."],
             ["Rights note", "The declared wiki license may not cover third-party text or media; verify the original source before redistribution."]
         ];
     }
@@ -161,6 +162,8 @@ const WikiFidelity = (() => {
             complexTables: 0
         };
         const warnings = [];
+        // Handle recognizable video players before the generic cleanup deletes them.
+        warnings.push(...WikiVideo.apply(root, article, stats));
         // Retain readable fallback text for selected unsupported content.
         for (const el of [...root.querySelectorAll(CLUTTER)]) {
             if (!root.contains(el)) continue;

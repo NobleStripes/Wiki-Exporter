@@ -325,6 +325,12 @@
     <option value="retain">Retain media links</option>
 </select>
 <p class="search-hint">No image downloads. Gallery captions and identifiable references are preserved.</p>
+<label for="video-mode">Video links and embedded players</label>
+<select id="video-mode">
+    <option value="captions">Video titles and captions only</option>
+    <option value="retain">Retain video links</option>
+</select>
+<p class="search-hint">No video downloads or playback. Recognizable citations are preserved.</p>
 <label for="link-mode">Article link handling</label>
             <select id="link-mode">
                 <option value="retain">Retain All Links</option>
@@ -381,6 +387,7 @@
     <script src="vendor/docx-math.js"></script>
     <script src="vendor/docx-html.js"></script>
 
+    <script src="video.js"></script>
     <script src="media.js"></script>
     <script src="fidelity.js"></script>
     <script src="links.js"></script>

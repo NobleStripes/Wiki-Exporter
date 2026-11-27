@@ -758,3 +758,7 @@ footer {
 /* v0.9.2 — Gallery and image links */
 #media-mode { margin: 6px 0; }
 #archive-options label[for="media-mode"], .popup-page label[for="media-mode"] { display:block; font-weight:600; margin-top:8px; font-size:13px; }
+
+/* v0.9.3 — Video link preferences */
+#video-mode { margin: 6px 0; }
+#archive-options label[for="video-mode"], .popup-page label[for="video-mode"] { display:block; font-weight:600; margin-top:8px; font-size:13px; }
