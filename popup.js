@@ -72,16 +72,17 @@ document.getElementById("export")
 
       const exportFormat = document.getElementById("export-format").value;
       const filename = article.title.replace(/[<>:"/\\|?*]/g, "_").trim().slice(0, 120) || "Article";
-      if (exportFormat === "docx") {
-        status.textContent = "Generating Word document...";
-        const blob = await WikiDocx.createDocument([article]);
-        downloadFile(blob, `${filename}.docx`);
-      } else {
-        const converter = WikiFidelity.createMarkdownConverter();
-        downloadFile(WikiFidelity.markdown(article, converter), `${filename}.md`, "text/markdown");
+      if (document.getElementById("preview-single").checked) {
+        if (!await WikiArchive.review([article], [], exportFormat, "single")) {
+          status.textContent = "Export discarded. No download requested.";
+          return;
+        }
       }
+      const blob = await WikiArchive.build([article], exportFormat);
+      downloadFile(blob, `${filename}.${exportFormat}`);
+      WikiArchive.log(exportFormat, "single", 1);
 
-      status.textContent = "Export generated.";
+      status.textContent = "Export download requested.";
 
     } catch (error) {
       status.textContent = error.message;

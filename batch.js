@@ -16,6 +16,9 @@
     const formatOptions =
         document.getElementById("format-options");
     const collectionTitle = document.getElementById("collection-title");
+    const archiveOptions = document.getElementById("archive-options");
+    const previewExport = document.getElementById("preview-export");
+    const combinedManifest = document.getElementById("combined-manifest");
 
     const selectAllButton =
         document.getElementById("select-all");
@@ -366,6 +369,8 @@
         });
 
         formatOptions.disabled = exporting;
+        archiveOptions.disabled = locked;
+        combinedManifest.disabled = locked || outputOptions.querySelector('input[name="output-mode"]:checked')?.value !== "combined";
         outputOptions.disabled = exporting;
         collectionTitle.disabled = locked;
     }
@@ -611,6 +616,12 @@
     });
 
     restorePreferences();
+    document.addEventListener("collectionrestored", () => {
+        syncOutputLabels();
+        syncControls();
+    });
+    outputOptions.addEventListener("change", syncControls);
+
 
     new MutationObserver(records => {
 
@@ -621,7 +632,8 @@
                 .filter(node =>
                     node.nodeType === Node.ELEMENT_NODE &&
                     node.matches("label") &&
-                    node.parentElement === articleList
+                    node.parentElement === articleList &&
+                    node.dataset.restoreSelection !== "true"
                 );
 
             // Apply the current keyword filter only
@@ -926,7 +938,7 @@
                 failed.length -
                 duplicates;
 
-            const partial =
+            let partial =
                 signal.aborted ||
                 Boolean(stopReason) ||
                 failed.length > 0 ||
@@ -967,185 +979,88 @@
 
 
             if (completed.length) {
-
+                const archiveInfo = {
+                    collection: categoryName, sources: context.sources,
+                    status: partial ? "partial" : "complete", selected: articles.length,
+                    duplicates, unprocessed, stopReason: stopReason || null, failed
+                };
+                // Preview is local and uses the same prepared content as the export.
+                cancelButton.disabled = true;
+                if (previewExport.checked) {
+                    status.textContent = "Review prepared articles before downloading.";
+                    if (!await WikiArchive.review(completed, summary, exportFormat, outputMode)) {
+                        status.textContent = "Export discarded. No download requested.";
+                        return;
+                    }
+                }
                 const safeName = categoryName
                     .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
-                    .trim()
-                    .slice(0, 120) || "Category";
-
-                const baseFilename =
-                    `Wiki_${safeName}${partial ? "_partial" : ""}`;
-
-                cancelButton.disabled = true;
-
-                // ====================================
-                // Combined Markdown document
-                // ====================================
-
+                    .trim().slice(0,120) || "Collection";
+                const base = () => `Wiki_${safeName}${partial ? "_partial" : ""}`;
+                status.textContent = `Generating ${exportFormat.toUpperCase()} export...`;
+                let count = completed.length;
 
                 if (outputMode === "combined") {
-
-                    if (exportFormat === "docx") {
-
-                        status.textContent = "Generating Word document...";
-
-                        const docxBlob =
-                            await WikiDocx.createDocument(
-                                completed,
-                                summary,
-                                failures
-                            );
-
-                        downloadFile(
-                            docxBlob,
-                            `${baseFilename}.docx`
-                        );
-
+                    const manifestData = WikiArchive.manifest(completed,archiveInfo);
+                    summary.push(`Approximate body word count: ${manifestData.approximateWords}`);
+                    const blob = await WikiArchive.build(completed,exportFormat,summary,failures,archiveInfo);
+                    if (combinedManifest.checked) {
+                        const zip = new JSZip();
+                        zip.file(`${base()}.${exportFormat}`,blob);
+                        zip.file("export_manifest.json",JSON.stringify(manifestData,null,2));
+                        const result = await zip.generateAsync({type:"blob",compression:"DEFLATE"});
+                        downloadFile(result,`${base()}.zip`);
                     } else {
-
-                        const documentContent = [
-
-                            summary.join("\n\n"),
-                            WikiFidelity.articleIndex(completed),
-
-                            ...completed.map(
-                                article => article.markdown
-                            ),
-
-                            ...(failures.length
-                                ? [
-                                    "# Failed Articles\n\n" +
-                                    failures.join("\n")
-                                ]
-                                : [])
-
-                        ].join("\n\n---\n\n");
-
-                        downloadFile(
-                            documentContent,
-                            `${baseFilename}.md`
-                        );
+                        downloadFile(blob,`${base()}.${exportFormat}`);
                     }
-                }
-
-
-                // ====================================
-                // Separate Markdown files in ZIP
-                // ====================================
-
-                else if (outputMode === "separate") {
-
-                    status.textContent =
-                        "Creating ZIP archive...";
-
+                } else {
                     const zip = new JSZip();
-
                     const folder = zip.folder("articles");
-
-                    const manifest = [
-                        summary.join("\n\n"),
-                        "",
-                        "## Exported Articles",
-                        ""
-                    ];
-
-
+                    const packaged = [];
+                    const packagingFailures = [];
+                    const names = new Map();
                     for (const [index, article] of completed.entries()) {
-
-                        const safeTitle = article.title
-                            .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
-                            .replace(/\s+/g, "_")
-                            .trim()
-                            .slice(0, 120) || "Article";
-
-                        const number = String(index + 1)
-                            .padStart(3, "0");
-
-                        const filename =
-                            `${number}_${safeTitle}.${exportFormat}`;
-
-                        status.textContent =
-                            `Generating file ${index + 1} of ${completed.length}...`;
-
-                        const fileContent = exportFormat === "docx"
-
-                            ? await WikiDocx.createDocument([article])
-
-                            : article.markdown;
-
-                        folder.file(filename, fileContent);
-
-                        manifest.push(
-                            `- ${filename}: ${article.url}`
-                        );
-                    }
-
-                    if (failures.length) {
-
-                        manifest.push(
-                            "",
-                            "## Failed Articles",
-                            "",
-                            ...failures
-                        );
-
-                    }
-
-                    zip.file(
-                        exportFormat === "docx"
-                            ? "export_report.txt"
-                            : "export_report.md",
-
-                        manifest.join("\n")
-                    );
-
-                    zip.file("export_manifest.json", JSON.stringify({
-                        collection: categoryName,
-                        sources: context.sources,
-                        status: partial ? "partial" : "complete",
-                        selected: articles.length,
-                        duplicates,
-                        unprocessed,
-                        stopReason: stopReason || null,
-                        failed,
-                        articles: completed.map(article => ({
-                            title: article.title,
-                            url: article.url,
-                            pageId: article.pageId ?? null,
-                            revision: article.revision ?? null,
-                            permanentRevision: WikiFidelity.revisionURL(article),
-                            retrievedAt: article.retrievedAt,
-                            license: article.license || null,
-                            detectedElements: article.prepared.stats,
-                            preparationWarnings: article.prepared.warnings
-                        }))
-                    }, null, 2));
-
-                    const zipBlob = await zip.generateAsync({
-
-                        type: "blob",
-                        compression: "DEFLATE",
-
-                        compressionOptions: {
-                            level: 6
+                        const title = article.title.replace(/[<>:"/\\|?*\x00-\x1f]/g,"_")
+                            .replace(/\s+/g,"_").trim().slice(0,120) || "Article";
+                        const filename = `${String(index+1).padStart(3,"0")}_${title}.${exportFormat}`;
+                        status.textContent = `Generating file ${index+1} of ${completed.length}...`;
+                        try {
+                            folder.file(filename, await WikiArchive.build([article],exportFormat));
+                            packaged.push(article);
+                            names.set(article.url,`articles/${filename}`);
+                        } catch(error) {
+                            packagingFailures.push({url:article.url,reason:error.message});
                         }
-
-                    }, metadata => {
-
-                        status.textContent =
-                            `Creating ZIP: ${metadata.percent.toFixed(0)
-                            }%`;
-
+                    }
+                    count = packaged.length;
+                    if (packagingFailures.length) {
+                        partial = true;
+                        summary.push(`File generation failures: ${packagingFailures.length}`);
+                        const index = summary.findIndex(line=>line.startsWith("Export status:"));
+                        if(index >= 0) summary[index] = "Export status: Partial";
+                        report.hidden = false;
+                        report.textContent += "\nFile generation failures:\n" + packagingFailures.map(e=>`${e.url}: ${e.reason}`).join("\n");
+                    }
+                    const manifestData = WikiArchive.manifest(packaged,{
+                        ...archiveInfo,status:partial?"partial":"complete",packagingFailures
                     });
-
-                    downloadFile(
-                        zipBlob,
-                        `${baseFilename}.zip`
-                    );
-
+                    manifestData.articles.forEach(a=>a.file=names.get(a.url));
+                    const manifest = [...summary,"",`Files generated: ${count}`,"","## Exported Articles",...packaged.map(a=>`- ${names.get(a.url)}: ${a.url}`),
+                        ...(failures.length?["","## Retrieval failures",...failures]:[]),
+                        ...(packagingFailures.length?["","## File generation failures",...packagingFailures.map(e=>`- ${e.url}: ${e.reason}`)]:[])];
+                    zip.file(exportFormat === "md" ? "export_report.md" : "export_report.txt",manifest.join("\n"));
+                    zip.file("export_manifest.json",JSON.stringify(manifestData,null,2));
+                    const result = await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}},metadata=>{
+                        status.textContent = `Creating ZIP: ${metadata.percent.toFixed(0)}%`;
+                    });
+                    downloadFile(result,`${base()}.zip`);
                 }
+                WikiArchive.log(exportFormat,outputMode,count,partial);
+                document.dispatchEvent(new Event("exporthistorychange"));
+                const result = signal.aborted ? "Export cancelled; partial download requested." : stopReason ? `Export stopped: ${stopReason}.` : partial ? "Partial export download requested." : "Export download requested.";
+                status.textContent = `${result} ${count} article file(s)/entries, ${duplicates} duplicates skipped, ${failed.length} retrieval failures, ${unprocessed} unprocessed.`;
+                return;
             }
-
 
             const message = signal.aborted
                 ? "Export cancelled."

@@ -543,6 +543,86 @@ const WikiCollection = (() => {
     }
 
     // ========================================
+    // Versioned local collection files (no article content)
+    // ========================================
+
+    function snapshot(preferences = {}) {
+        if (articles.size > 10000) throw new Error("Collection exceeds 10,000 saved links.");
+        const checked = new Map([...articleList.querySelectorAll('input[type="checkbox"]')]
+            .map(box => [box.value, box.checked]));
+        return {
+            schema: "wiki-exporter.collection",
+            version: 1,
+            savedAt: new Date().toISOString(),
+            preferences,
+            articles: [...articles.values()].map(entry => ({
+                url: entry.url, title: entry.title,
+                sources: [...entry.sources], selected: checked.get(entry.url) === true
+            })),
+            subcategories: [...subcategories.keys()],
+            visitedCategories: [...visitedCategories]
+        };
+    }
+
+    function restore(data) {
+        if (exporting) throw new Error("Cannot restore during an export.");
+        if (!data || data.schema !== "wiki-exporter.collection" || data.version !== 1 ||
+            !Array.isArray(data.articles) || data.articles.length > 10000) {
+            throw new Error("Unsupported or oversized Wiki Exporter collection file.");
+        }
+        // Validate every entry before replacing the current collection.
+        function validateURL(raw, category = false) {
+            if (typeof raw !== "string" || raw.length > 2048) throw new Error("Invalid saved URL.");
+            return parseWikiURL(raw, category);
+        }
+        function validateSource(source) {
+            if (["Pasted URLs", "Open browser tabs", "Saved collection"].includes(source)) return source;
+            return validateURL(source, true).url;
+        }
+        function categoryURLs(values) {
+            if (values === undefined) return [];
+            if (!Array.isArray(values) || values.length > 10000) throw new Error("Invalid saved categories.");
+            return [...new Set(values.map(value => validateURL(value,true).url))];
+        }
+        const unique = new Set();
+        const entries = data.articles.map(item => {
+            if (!item || typeof item.selected !== "boolean" ||
+                typeof item.title !== "string" || item.title.length > 512 ||
+                !Array.isArray(item.sources) || item.sources.length > 1000) {
+                throw new Error("Invalid saved article entry.");
+            }
+            const entry = validateURL(item.url);
+            if (unique.has(entry.url)) throw new Error("Duplicate article in saved collection.");
+            unique.add(entry.url);
+            const sources = [...new Set(item.sources.map(validateSource))];
+            return { ...entry, title: item.title.trim() || entry.title,
+                selected: item.selected, sources: sources.length ? sources : ["Saved collection"] };
+        });
+        const categories = categoryURLs(data.subcategories);
+        const visited = categoryURLs(data.visitedCategories);
+        const preferences = data.preferences && typeof data.preferences === "object" && !Array.isArray(data.preferences)
+            ? data.preferences : {};
+
+        articles.clear(); subcategories.clear(); visitedCategories.clear();
+        articleList.replaceChildren(); subcategoryList.replaceChildren();
+        urlsInput.value = "";
+        for (const entry of entries) {
+            addArticle(entry.url,entry.title,entry.sources[0],entry.selected);
+            articles.get(entry.url).sources = new Set(entry.sources);
+            // MutationObserver must not auto-select restored rows based on the query.
+            articleList.lastElementChild.dataset.restoreSelection = "true";
+        }
+        visited.forEach(url => visitedCategories.add(url));
+        for (const url of categories) {
+            const category = parseWikiURL(url,true);
+            addSubcategory(category);
+            if (visitedCategories.has(url)) subcategories.get(url).textContent = `Loaded: ${category.title}`;
+        }
+        sync();
+        return { count: entries.length, preferences };
+    }
+
+    // ========================================
     // Clear collection
     // ========================================
 
@@ -603,6 +683,9 @@ const WikiCollection = (() => {
             parseWikiURL(raw),
 
         describe,
+        snapshot,
+        restore,
+        withLoad: task => runTask(task),
 
         get busy() {
             return loading;

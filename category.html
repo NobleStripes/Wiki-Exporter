@@ -89,6 +89,16 @@
 
                 <hr>
 
+                <hr>
+                <div class="source-section">
+                    <h3>Saved Collections</h3>
+                    <p class="source-description">Save or reopen article links, selections, and preferences. No retrieved article text is saved in the collection file.</p>
+                    <div class="toolbar">
+                        <button id="save-collection" class="secondary" disabled>Save Collection</button>
+                        <button id="load-collection" class="secondary">Open Collection</button>
+                        <input type="file" id="collection-file" accept=".json,application/json" hidden>
+                    </div>
+                </div>
                 <button id="clear-collection" class="secondary" disabled>
                     Clear Collection
                 </button>
@@ -96,6 +106,7 @@
             </fieldset>
 
             <p id="status" role="status"></p>
+            <p id="archive-status" role="status"></p>
 
             <div id="filter-controls">
 
@@ -266,6 +277,18 @@
                     Microsoft Word (.docx)
                 </label>
 
+                <label class="export-option">
+                    <input type="radio" name="export-format" value="html">
+                    HTML document (.html)
+                </label>
+                <label class="export-option">
+                    <input type="radio" name="export-format" value="txt">
+                    Plain text (.txt)
+                </label>
+                <label class="export-option">
+                    <input type="radio" name="export-format" value="json">
+                    Structured JSON (.json)
+                </label>
             </fieldset>
 
             <fieldset id="output-options">
@@ -293,6 +316,20 @@
                 </label>
 
             </fieldset>
+
+            <fieldset id="archive-options">
+                <legend>Preview and archive</legend>
+                <label class="export-option"><input type="checkbox" id="preview-export"> Review prepared articles before downloading</label>
+                <label class="export-option"><input type="checkbox" id="combined-manifest"> Include manifest with combined document (ZIP)</label>
+                <p class="search-hint">Separate-file exports already include an export manifest.</p>
+            </fieldset>
+            <details id="export-history">
+                <summary>Local export history</summary>
+                <label class="export-option"><input type="checkbox" id="history-enabled"> Remember export activity on this device</label>
+                <p class="search-hint">Opt-in; stores date, format, mode and article count only. No titles, URLs or article text.</p>
+                <button class="secondary" id="clear-history" disabled>Clear History</button>
+                <ul id="history-list"></ul>
+            </details>
 
             <div class="toolbar">
 
@@ -330,6 +367,7 @@
     <script src="vendor/docx-html.js"></script>
 
     <script src="fidelity.js"></script>
+    <script src="archive.js"></script>
     <script src="docx-exporter.js"></script>
     <script src="settings.js"></script>
     <script src="request.js"></script>
@@ -337,6 +375,7 @@
     <script src="category-page.js"></script>
     <script src="search.js"></script>
     <script src="batch.js"></script>
+    <script src="collection-archive.js"></script>
 
 </body>
 
