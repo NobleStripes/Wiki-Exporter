@@ -1,0 +1,79 @@
+{
+  "schema": "wiki-exporter.dependency-inventory",
+  "version": 1,
+  "note": "Fill exact versions, source URLs and actual copyright/license notices. License hints are not an audit. Include all bundled transitive notices.",
+  "files": [
+    {
+      "file": "vendor/turndown.js",
+      "package": "turndown",
+      "version": "",
+      "sha256": "f46330e27d6009ecc3b001237e735cf58293772d2a465436a61de6f536b59a81",
+      "bytes": 26879,
+      "license_hint": "MIT",
+      "upstream": "https://github.com/mixmark-io/turndown",
+      "exact_source_url": "",
+      "notice_files": [],
+      "bundled_dependencies_reviewed": false
+    },
+    {
+      "file": "vendor/turndown-plugin-gfm.js",
+      "package": "turndown-plugin-gfm",
+      "version": "",
+      "sha256": "cf744cc1b7580f06d64ce236a4ff2630a53d389eccf2133a09d71ca443511912",
+      "bytes": 4191,
+      "license_hint": "MIT",
+      "upstream": "https://github.com/mixmark-io/turndown-plugin-gfm",
+      "exact_source_url": "",
+      "notice_files": [],
+      "bundled_dependencies_reviewed": false
+    },
+    {
+      "file": "vendor/jszip.min.js",
+      "package": "jszip",
+      "version": "",
+      "sha256": "7f839b2d4688b845c105ebf5d2f9803075f91ea0fe72bdaac176c3a04dd3d2c1",
+      "bytes": 97781,
+      "license_hint": "MIT or GPL-3.0",
+      "upstream": "https://github.com/Stuk/jszip",
+      "exact_source_url": "",
+      "notice_files": [],
+      "bundled_dependencies_reviewed": false
+    },
+    {
+      "file": "vendor/docx.js",
+      "package": "docx",
+      "version": "",
+      "sha256": "9e882643b852c0865b2603ae31d795c3ba800dd18cabac7365aedbad6dd82b27",
+      "bytes": 1062006,
+      "license_hint": "MIT",
+      "upstream": "https://github.com/dolanmiu/docx",
+      "exact_source_url": "",
+      "notice_files": [],
+      "bundled_dependencies_reviewed": false
+    },
+    {
+      "file": "vendor/docx-math.js",
+      "package": "docx (math module)",
+      "version": "",
+      "sha256": "c3b195a29e7865f1dadc9d6bbf4ddb4a8ec28c4188c2a84d21a9722a92c47c26",
+      "bytes": 83257,
+      "license_hint": "MIT",
+      "upstream": "https://github.com/dolanmiu/docx",
+      "exact_source_url": "",
+      "notice_files": [],
+      "bundled_dependencies_reviewed": false
+    },
+    {
+      "file": "vendor/docx-html.js",
+      "package": "docx (HTML module)",
+      "version": "",
+      "sha256": "ee50b0bfc178d105e20f48c1d6d3ec7c291070050fb2f55f3ad0223d4226ba6c",
+      "bytes": 579137,
+      "license_hint": "MIT",
+      "upstream": "https://github.com/dolanmiu/docx",
+      "exact_source_url": "",
+      "notice_files": [],
+      "bundled_dependencies_reviewed": false
+    }
+  ]
+}

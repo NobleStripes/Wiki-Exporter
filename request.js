@@ -163,26 +163,27 @@ const WikiRequest = (() => {
 
         // Only allow the existing read operations.
 
+        // RC: accept only the three read-only request shapes used by the extension.
         const action = query.get("action");
-
-        // A narrowly scoped, read-only request for declared site rights.
-        const licenseLookup = action === "query" &&
-            query.get("meta") === "siteinfo" &&
-            query.get("siprop") === "rightsinfo" &&
-            [...query.keys()].every(key =>
-                ["action", "meta", "siprop", "formatversion"].includes(key)
-            );
-
-        if (
-            action !== "parse" &&
-            !(
-                action === "query" &&
-                query.get("list") === "categorymembers"
-            ) && !licenseLookup
-        ) {
-            throw stopError(
-                "Unsupported API operation."
-            );
+        const keys = [...query.keys()];
+        const exactKeys = allowed => keys.every(key => allowed.includes(key));
+        const uniqueKeys = new Set(keys).size === keys.length;
+        const json = !query.has("format") || query.get("format") === "json";
+        const parse = action === "parse" &&
+            exactKeys(["action", "page", "prop", "redirects", "format", "formatversion"]) &&
+            Boolean(query.get("page")?.trim()) && query.get("prop") === "text|revid" &&
+            query.get("redirects") === "1" && query.get("formatversion") === "2";
+        const category = action === "query" && query.get("list") === "categorymembers" &&
+            exactKeys(["action", "list", "cmtitle", "cmtype", "cmprop", "cmlimit", "format", "continue", "cmcontinue"]) &&
+            /^Category:.+/u.test(query.get("cmtitle") || "") && query.get("cmtype") === "page|subcat" &&
+            query.get("cmprop") === "ids|title|type" && query.get("cmlimit") === "max" &&
+            (!query.has("continue") || query.has("cmcontinue")) &&
+            (!query.has("cmcontinue") || Boolean(query.get("cmcontinue")));
+        const licenseLookup = action === "query" && query.get("meta") === "siteinfo" &&
+            query.get("siprop") === "rightsinfo" && query.get("formatversion") === "2" &&
+            exactKeys(["action", "meta", "siprop", "formatversion", "format"]);
+        if (!uniqueKeys || !json || !(parse || category || licenseLookup)) {
+            throw stopError("Unsupported API operation or parameters.");
         }
 
         query.set("maxlag", "5");
@@ -343,6 +344,10 @@ const WikiRequest = (() => {
                             "Unexpected server response. " +
                             "Expected JSON. Export stopped."
                         );
+                    }
+
+                    if (!data || typeof data !== "object" || Array.isArray(data)) {
+                        throw stopError("Unexpected server response. Expected a JSON object.");
                     }
 
                     // MediaWiki-specific errors.

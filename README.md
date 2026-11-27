@@ -18,16 +18,26 @@ You find the pages. You choose the sources. The exporter handles the tedious par
 
 **Built out of laziness. Maintained out of spite. Used for research.**
 
+## Supported exports and collection tools
+
+- Markdown, Word (DOCX), standalone HTML, plain text and structured JSON.
+- Combined documents and separate article files in ZIP archives.
+- Categories, manually expanded subcategories, pasted article URLs and optional open-tab imports; cross-wiki collections.
+- Boolean keywords, exclusions, quoted phrases, fuzzy search, automatic selection, relevance sorting and selection review.
+- Source and revision information, wiki-declared license metadata where available, contributor history links, infobox/table preparation, reference preservation and conversion diagnostics.
+- Local HTML navigation, independent article/image/video link settings, local previews and JSON manifests.
+- Save/open collections of links and preferences, and optional local export history.
+
 ## Development note
 
 AI tools assisted with debugging and rapid prototyping. The extension itself doesn't use AI to generate, summarize, or rewrite content.
 
-Article exports are Markdown files with the title, source URL, and retrieval time. The exporter removes scripts, styles, iframes, edit links, ads, and the table of contents.
+Exports include the article title, source URL and retrieval time, with revision and declared licensing information where available. The extension reformats article content without altering the live wiki page. Images and videos are represented by descriptions and optional links; media bytes are not downloaded. Complex source markup may convert imperfectly; check diagnostics and compare important passages with the source.
 
 ## Requirements
 
 - Google Chrome
-- The extension files in this repository, including the Turndown scripts in `vendor/`
+- The extension files in this repository, including all locally bundled libraries in `vendor/`
 
 ## Install
 
@@ -38,12 +48,13 @@ Article exports are Markdown files with the title, source URL, and retrieval tim
 
 ## Use
 
-1. Open an article on a Fandom wiki.
-2. Select the **Wiki Exporter** extension from Chrome's toolbar.
-3. Select **Export article as Markdown**.
-4. Save the downloaded Markdown file.
+**Single article:** Open a supported Fandom article, open the extension, select format and link/media preferences, then choose Export article. Optional preview lets you review prepared content before download.
 
-The extension currently supports Fandom pages only.
+**Collections:** Open a category or choose Build Research Collection. Load a category, manually expand a subcategory, paste article URLs, or optionally import current-window wiki tabs. Search and select articles, choose the format and packaging mode, and export up to 100 selected articles. Follow the Chrome permission prompt for the required wiki origins. Use network retrieval only where authorized by the site. Save Collection and Open Collection save and restore links and settings, not cached article content.
+
+The extension currently supports Fandom-hosted wikis only. HTML local navigation works for articles included in the export; references outside the collection remain online links. No promise of compatibility with every custom wiki template or browser is made.
+
+See [Privacy policy](PRIVACY.md) and [release checklist](RELEASE_CHECKLIST.md). The software is GPL v3; the source content and bundled libraries retain their respective licenses.
 
 ## Fandom Content, Attribution and Licensing
 
@@ -129,7 +140,7 @@ restrictions. Where permitted, Fandom's official
   user's device.
 - **Source attribution:** Retain original article URLs
   and, where available, revision information. License
-  details are not yet included in exports.
+  details are included when available; unverified licenses are marked as such.
 - **No telemetry:** Do not transmit browsing activity or
   exported documents to the developer's servers.
 

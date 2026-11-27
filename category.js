@@ -40,10 +40,18 @@ async function getCategoryMembers(categoryUrl, signal) {
         throw new Error("Invalid category URL");
     }
 
+    // RC: limit category discovery independently of the article export cap.
+    const MAX_DISCOVERY_PAGES = 50;
+    const MAX_DISCOVERY_MEMBERS = 10000;
+    const seenContinuations = new Set();
     const members = new Map();
     let continuation = {};
+    let pages = 0;
 
     do {
+        if (++pages > MAX_DISCOVERY_PAGES) {
+            throw new Error("Category discovery exceeded 50 API pages. Choose a narrower category.");
+        }
         const params = new URLSearchParams({
             action: "query",
             list: "categorymembers",
@@ -61,7 +69,13 @@ async function getCategoryMembers(categoryUrl, signal) {
             signal
         );
 
-        for (const member of data.query.categorymembers) {
+        const entries = data.query?.categorymembers;
+        if (!Array.isArray(entries)) throw new Error("Unexpected category response.");
+        for (const member of entries) {
+            if (!member || !Number.isSafeInteger(member.pageid) || member.pageid < 1 ||
+                typeof member.title !== "string" || !member.title.trim() || !Number.isInteger(member.ns)) {
+                throw new Error("Invalid category member in server response.");
+            }
             members.set(member.pageid, {
                 id: member.pageid,
                 title: member.title,
@@ -75,7 +89,29 @@ async function getCategoryMembers(categoryUrl, signal) {
             });
         }
 
-        continuation = data.continue || null;
+        if (members.size > MAX_DISCOVERY_MEMBERS) {
+            throw new Error("Category discovery exceeded 10,000 members. Choose a narrower category.");
+        }
+        const next = data.continue;
+        if (next == null) {
+            continuation = null;
+        } else {
+            if (typeof next !== "object" || Array.isArray(next) ||
+                Object.keys(next).some(key => !["continue", "cmcontinue"].includes(key)) ||
+                typeof next.cmcontinue !== "string" || !next.cmcontinue ||
+                (Object.hasOwn(next, "continue") && typeof next.continue !== "string")) {
+                throw new Error("Invalid category continuation returned by server.");
+            }
+            // Explicitly copy only permitted server pagination keys.
+            continuation = { cmcontinue: next.cmcontinue };
+            if (Object.hasOwn(next, "continue")) continuation.continue = next.continue;
+            const key = JSON.stringify([continuation.cmcontinue, continuation.continue ?? null]);
+            if (seenContinuations.has(key)) throw new Error("Repeated category continuation; discovery stopped.");
+            seenContinuations.add(key);
+            if (members.size >= MAX_DISCOVERY_MEMBERS) {
+                throw new Error("Category discovery reached 10,000 members with more available. Choose a narrower category.");
+            }
+        }
 
     } while (continuation);
 
