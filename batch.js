@@ -1,4 +1,3 @@
-
 // ========================================
 // Wiki Exporter — Batch Extraction Engine
 // ========================================
@@ -28,6 +27,9 @@
 
     const searchInput =
         document.getElementById("article-search");
+
+    const searchMode =
+        document.getElementById("search-mode");
 
     const sortSelect =
         document.getElementById("article-sort");
@@ -100,20 +102,26 @@
 
     function applyArticleView() {
 
-        const query = searchInput.value
-            .trim()
-            .toLocaleLowerCase();
+        const query = searchInput.value.trim();
+        const mode = searchMode.value;
 
         const rows = getArticleRows();
 
         rows.forEach((row, index) => {
 
-            const title = [
-                row.dataset.title || row.textContent.trim(),
-                row.dataset.host || ""
-            ].join(" ").toLocaleLowerCase();
+            const title =
+                row.dataset.title ||
+                row.textContent.trim();
 
-            row.hidden = !title.includes(query);
+            const host =
+                row.dataset.host || "";
+
+            row.hidden = !WikiSearch.matches(
+                title,
+                host,
+                query,
+                mode
+            );
 
             row.style.order = index;
 
@@ -205,6 +213,9 @@
         // Search and sorting controls.
 
         searchInput.disabled =
+            exporting || total === 0;
+
+        searchMode.disabled =
             exporting || total === 0;
 
         sortSelect.disabled =
@@ -316,6 +327,19 @@
 
     });
 
+    searchMode.addEventListener("change", () => {
+
+        WikiSettings.set(
+            "searchMode",
+            searchMode.value
+        );
+
+        selectSearchMatches();
+
+        syncControls();
+
+    });
+
     sortSelect.addEventListener("change", () => {
 
         WikiSettings.set("sort", sortSelect.value);
@@ -371,6 +395,9 @@
         }
 
         sortSelect.value = WikiSettings.get("sort");
+
+        searchMode.value =
+            WikiSettings.get("searchMode");
 
         syncOutputLabels();
     }

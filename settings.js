@@ -10,13 +10,15 @@ const WikiSettings = (() => {
     const defaults = {
         format: "md",
         output: "combined",
-        sort: "asc"
+        sort: "asc",
+        searchMode: "exact"
     };
 
     const allowed = {
         format: ["md", "docx"],
         output: ["combined", "separate"],
-        sort: ["asc", "desc"]
+        sort: ["asc", "desc"],
+        searchMode: ["exact", "fuzzy"]
     };
 
     function get(name) {

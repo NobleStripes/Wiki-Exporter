@@ -40,11 +40,7 @@
                         Fandom Category URL
                     </label>
 
-                    <input
-                        type="url"
-                        id="category-url"
-                        placeholder="Paste a Fandom category URL"
-                    >
+                    <input type="url" id="category-url" placeholder="Paste a Fandom category URL">
 
                     <button id="load-category">
                         Load Category
@@ -64,11 +60,8 @@
                         Paste one article URL per line
                     </label>
 
-                    <textarea
-                        id="article-urls"
-                        placeholder="https://example.fandom.com/wiki/Article"
-                        rows="5"
-                    ></textarea>
+                    <textarea id="article-urls" placeholder="https://example.fandom.com/wiki/Article"
+                        rows="5"></textarea>
 
                     <button id="add-urls">
                         Add URLs to Collection
@@ -96,11 +89,7 @@
 
                 <hr>
 
-                <button
-                    id="clear-collection"
-                    class="secondary"
-                    disabled
-                >
+                <button id="clear-collection" class="secondary" disabled>
                     Clear Collection
                 </button>
 
@@ -116,19 +105,29 @@
                         Search Articles
                     </label>
 
-                    <input
-                        type="search"
-                        id="article-search"
-                        placeholder="Enter keywords to select matching articles..."
-                        autocomplete="off"
-                        aria-describedby="search-hint"
-                        disabled
-                    >
+                    <input type="search" id="article-search" placeholder="Enter keywords to select matching articles..."
+                        autocomplete="off" aria-describedby="search-hint" disabled>
 
                     <p class="search-hint" id="search-hint">
                         Searching automatically selects matching articles
                         and deselects non-matching articles.
                     </p>
+
+                    <label for="search-mode">
+                        Matching Mode
+                    </label>
+
+                    <select id="search-mode" disabled>
+
+                        <option value="exact">
+                            Exact Keyword Search
+                        </option>
+
+                        <option value="fuzzy">
+                            Fuzzy Search (Tolerates Typos)
+                        </option>
+
+                    </select>
 
                 </div>
 
@@ -152,27 +151,19 @@
 
             <div class="toolbar" id="selection-toolbar">
 
-                <button id="select-all"
-                        class="secondary"
-                        disabled>
+                <button id="select-all" class="secondary" disabled>
                     Select All
                 </button>
 
-                <button id="select-none"
-                        class="secondary"
-                        disabled>
+                <button id="select-none" class="secondary" disabled>
                     Select None
                 </button>
 
-                <button id="select-filtered"
-                        class="secondary"
-                        disabled>
+                <button id="select-filtered" class="secondary" disabled>
                     Select Filtered
                 </button>
 
-                <button id="deselect-filtered"
-                        class="secondary"
-                        disabled>
+                <button id="deselect-filtered" class="secondary" disabled>
                     Deselect Filtered
                 </button>
 
@@ -218,10 +209,7 @@
 
                 <label class="export-option">
 
-                    <input type="radio"
-                           name="output-mode"
-                           value="combined"
-                           checked>
+                    <input type="radio" name="output-mode" value="combined" checked>
 
                     <span id="combined-label">
                         Combined document (.md)
@@ -231,9 +219,7 @@
 
                 <label class="export-option">
 
-                    <input type="radio"
-                           name="output-mode"
-                           value="separate">
+                    <input type="radio" name="output-mode" value="separate">
 
                     <span id="separate-label">
                         Separate .md files (.zip)
@@ -283,6 +269,7 @@
     <script src="request.js"></script>
     <script src="category.js"></script>
     <script src="category-page.js"></script>
+    <script src="search.js"></script>
     <script src="batch.js"></script>
 
 </body>
