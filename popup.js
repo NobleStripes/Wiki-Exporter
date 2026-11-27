@@ -1,3 +1,22 @@
+// ========================================
+// Restore Export Preferences
+// ========================================
+
+const formatSelect =
+    document.getElementById("export-format");
+
+formatSelect.value =
+    WikiSettings.get("format");
+
+formatSelect.addEventListener("change", () => {
+
+    WikiSettings.set(
+        "format",
+        formatSelect.value
+    );
+
+});
+
 document.getElementById("export")
   .addEventListener("click", async () => {
 

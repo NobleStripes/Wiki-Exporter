@@ -446,3 +446,96 @@ footer {
     }
 
 }
+
+/* ========================================
+   v0.6.0 — Search and Selection
+   ======================================== */
+
+#filter-controls {
+    display: grid;
+    grid-template-columns: 1fr 130px;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+#filter-controls label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#selection-information {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+    font-size: 13px;
+}
+
+#selection-count {
+    margin-left: 0;
+    color: var(--text-secondary);
+}
+
+#batch-limit {
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+#batch-limit.over-limit {
+    color: var(--error);
+    font-weight: 600;
+}
+
+/* Allow visual sorting without rebuilding DOM. */
+
+#article-list {
+    display: flex;
+    flex-direction: column;
+}
+
+#article-list:empty {
+    display: none;
+}
+
+#article-list label {
+    flex: 0 0 auto;
+}
+
+/* Hide non-matching search results. */
+
+#article-list label[hidden] {
+    display: none;
+}
+
+#filter-empty {
+    padding: 16px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+#filter-empty[hidden] {
+    display: none;
+}
+
+#filter-controls input:disabled,
+#filter-controls select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+
+    #filter-controls {
+        grid-template-columns: 1fr;
+    }
+
+    #selection-information {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+}

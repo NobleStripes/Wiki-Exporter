@@ -284,6 +284,79 @@
 
     articleList.addEventListener("change", syncControls);
 
+    // ========================================
+    // Export Preferences
+    // ========================================
+
+    function syncOutputLabels() {
+
+        const format = formatOptions.querySelector(
+            'input[name="export-format"]:checked'
+        )?.value || "md";
+
+        combinedLabel.textContent =
+            `Combined document (.${format})`;
+
+        separateLabel.textContent =
+            `Separate .${format} files (.zip)`;
+    }
+
+    // Restore saved preferences.
+
+    function restorePreferences() {
+
+        const format = WikiSettings.get("format");
+        const output = WikiSettings.get("output");
+
+        const formatRadio = formatOptions.querySelector(
+            `input[value="${format}"]`
+        );
+
+        const outputRadio = outputOptions.querySelector(
+            `input[value="${output}"]`
+        );
+
+        if (formatRadio) {
+            formatRadio.checked = true;
+        }
+
+        if (outputRadio) {
+            outputRadio.checked = true;
+        }
+
+        sortSelect.value = WikiSettings.get("sort");
+
+        syncOutputLabels();
+    }
+
+    // Remember format changes.
+
+    formatOptions.addEventListener("change", () => {
+
+        const format = formatOptions.querySelector(
+            'input[name="export-format"]:checked'
+        )?.value;
+
+        WikiSettings.set("format", format);
+
+        syncOutputLabels();
+
+    });
+
+    // Remember packaging changes.
+
+    outputOptions.addEventListener("change", () => {
+
+        const output = outputOptions.querySelector(
+            'input[name="output-mode"]:checked'
+        )?.value;
+
+        WikiSettings.set("output", output);
+
+    });
+
+    restorePreferences();
+
     new MutationObserver(() => {
         if (!controller) {
             progress.value = 0;
