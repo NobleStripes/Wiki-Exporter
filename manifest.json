@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Wiki Exporter",
-    "version": "0.9.3",
+    "version": "0.9.99.1",
     "description": "No AI. Human crawler. For lazy people.",
     "permissions": [
         "activeTab",
@@ -15,5 +15,6 @@
     ],
     "action": {
         "default_popup": "popup.html"
-    }
+    },
+    "version_name": "1.0.0-rc.1"
 }

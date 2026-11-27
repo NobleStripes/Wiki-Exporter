@@ -27,9 +27,17 @@ const linkModeSelect = document.getElementById("link-mode");
 linkModeSelect.value = WikiSettings.get("linkMode");
 linkModeSelect.addEventListener("change",()=>WikiSettings.set("linkMode",linkModeSelect.value));
 
+// RC: prevent overlapping single-article exports and lock preferences.
+let singleExportBusy = false;
 document.getElementById("export")
   .addEventListener("click", async () => {
 
+    if (singleExportBusy) return;
+    singleExportBusy = true;
+    const controls = ["export", "open-collection", "export-format", "link-mode", "media-mode", "video-mode", "preview-single"]
+        .map(id => document.getElementById(id)).filter(Boolean);
+    const prior = controls.map(el => el.disabled);
+    controls.forEach(el => el.disabled = true);
     const status = document.getElementById("status");
 
     try {
@@ -40,7 +48,14 @@ document.getElementById("export")
         currentWindow: true
       });
 
-      if (tab.url && isCategoryPage(tab.url)) {
+      if (!tab?.id || !tab.url) throw new Error("No accessible active tab.");
+      const activeURL = new URL(tab.url);
+      if (activeURL.protocol !== "https:" || !activeURL.hostname.endsWith(".fandom.com") ||
+          activeURL.username || activeURL.password || activeURL.port || !activeURL.pathname.startsWith("/wiki/")) {
+        throw new Error("Open a supported Fandom wiki article or category first.");
+      }
+
+      if (isCategoryPage(tab.url)) {
 
         const params = new URLSearchParams({
           url: tab.url
@@ -53,10 +68,6 @@ document.getElementById("export")
         });
 
         return;
-      }
-
-      if (!tab?.id) {
-        throw new Error("No active tab.");
       }
 
       const [execution] =
@@ -101,6 +112,9 @@ document.getElementById("export")
 
     } catch (error) {
       status.textContent = error.message;
+    } finally {
+      controls.forEach((el, index) => el.disabled = prior[index]);
+      singleExportBusy = false;
     }
   });
 
