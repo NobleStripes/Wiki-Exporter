@@ -165,12 +165,20 @@ const WikiRequest = (() => {
 
         const action = query.get("action");
 
+        // A narrowly scoped, read-only request for declared site rights.
+        const licenseLookup = action === "query" &&
+            query.get("meta") === "siteinfo" &&
+            query.get("siprop") === "rightsinfo" &&
+            [...query.keys()].every(key =>
+                ["action", "meta", "siprop", "formatversion"].includes(key)
+            );
+
         if (
             action !== "parse" &&
             !(
                 action === "query" &&
                 query.get("list") === "categorymembers"
-            )
+            ) && !licenseLookup
         ) {
             throw stopError(
                 "Unsupported API operation."

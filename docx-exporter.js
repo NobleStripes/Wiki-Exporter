@@ -1,305 +1,103 @@
-
-// ========================================
-// Wiki Exporter — DOCX Export Engine
-// ========================================
-
+// Wiki Exporter v0.8.0 — native Word documents
 const WikiDocx = (() => {
-
     function ensureReady() {
-
-        if (
-            !globalThis.docx?.Packer ||
-            !globalThis.docxHtml?.htmlToContent
-        ) {
-            throw new Error(
-                "DOCX libraries are not loaded correctly."
-            );
+        if (!globalThis.docx?.Packer || !globalThis.docxHtml?.htmlToContent) {
+            throw new Error("DOCX libraries are not loaded correctly.");
         }
     }
 
-    // ========================================
-    // Prepare article HTML
-    // ========================================
-
-    function prepareHtml(article) {
-
-        const template = document.createElement("template");
-
-        template.innerHTML = article.html;
-
-        const content = template.content;
-
-        content.querySelectorAll(`
-            script,
-            style,
-            iframe,
-            object,
-            embed,
-            button,
-            .mw-editsection,
-            .wikia-ad,
-            .toc
-        `).forEach(element => element.remove());
-
-        // Preserve hyperlinks.
-
-        content.querySelectorAll("a[href]")
-            .forEach(link => {
-
-                try {
-
-                    const url = new URL(
-                        link.getAttribute("href"),
-                        article.url
-                    );
-
-                    if (["https:", "http:"].includes(url.protocol)) {
-                        link.setAttribute("href", url.href);
-                    } else {
-                        link.removeAttribute("href");
-                    }
-
-                } catch {
-                    link.removeAttribute("href");
-                }
-
-            });
-
-        // Represent images as links.
-        // No additional image downloads.
-
-        content.querySelectorAll("img")
-            .forEach(image => {
-
-                const source =
-                    image.getAttribute("data-src") ||
-                    image.getAttribute("src");
-
-                const label =
-                    image.getAttribute("alt") || "Image";
-
-                const replacement =
-                    document.createElement("a");
-
-                replacement.textContent =
-                    `[Image: ${label}]`;
-
-                try {
-
-                    const url = new URL(
-                        source || "",
-                        article.url
-                    );
-
-                    if (
-                        source &&
-                        ["https:", "http:"].includes(url.protocol)
-                    ) {
-                        replacement.href = url.href;
-                    }
-
-                } catch {
-                    // Retain the image description.
-                }
-
-                if (image.closest("a")) {
-                    image.replaceWith(
-                        document.createTextNode(
-                            replacement.textContent
-                        )
-                    );
-                } else {
-                    image.replaceWith(replacement);
-                }
-
-            });
-
-        return template.innerHTML;
+    function linkParagraph(label, value) {
+        const { Paragraph, ExternalHyperlink, TextRun } = globalThis.docx;
+        let url;
+        try {
+            const parsed = new URL(value);
+            if (["https:", "http:"].includes(parsed.protocol)) url = parsed.href;
+        } catch { /* Ordinary metadata, not a URL. */ }
+        return new Paragraph({ children: [
+            new TextRun({ text: `${label}: `, bold: true }),
+            url ? new ExternalHyperlink({ link: url, children: [new TextRun({ text: value, style: "Hyperlink" })] })
+                : new TextRun(String(value))
+        ] });
     }
 
-    // ========================================
-    // Convert an article to Word content
-    // ========================================
+    // Keep the article readable if the HTML converter throws. This is an
+    // explicitly reported fallback, not a lossless reconstruction.
+    function fallbackText(html) {
+        const template = document.createElement("template");
+        template.innerHTML = html;
+        const block = /^(p|div|h[1-6]|li|tr|ul|ol|table|section|aside|dl|dt|dd|blockquote|pre|figure|figcaption|caption)$/;
+        function read(node) {
+            if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+            if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return "";
+            if (node.localName === "br") return "\n";
+            let text = [...node.childNodes].map(read).join("");
+            if (["td", "th"].includes(node.localName)) return text + " | ";
+            if (node.localName === "a" && node.getAttribute("href")) text += ` (${node.getAttribute("href")})`;
+            return block.test(node.localName || "") ? `\n${text}\n` : text;
+        }
+        return read(template.content).split(/\n+/).map(s => s.trim()).filter(Boolean);
+    }
 
     function articleToContent(article, pageBreak = false) {
-
-        const {
-            Paragraph,
-            HeadingLevel,
-            ExternalHyperlink,
-            TextRun
-        } = globalThis.docx;
-
+        const { Paragraph, HeadingLevel } = globalThis.docx;
+        const prepared = article.prepared || WikiFidelity.prepare(article);
         const warnings = [];
-
-        const body = globalThis.docxHtml.htmlToContent(
-            prepareHtml(article),
-            {
+        let body;
+        try {
+            body = globalThis.docxHtml.htmlToContent(prepared.html, {
                 baseUrl: article.url,
-
-                onWarning: warning => {
-                    warnings.push(warning.message);
-                }
-            }
-        );
-
-        const children = [
-
-            new Paragraph({
-                text: article.title,
-                heading: HeadingLevel.HEADING_1,
-                pageBreakBefore: pageBreak
-            }),
-
-            new Paragraph({
-                children: [
-
-                    new TextRun("Source: "),
-
-                    new ExternalHyperlink({
-                        link: article.url,
-                        children: [
-                            new TextRun({
-                                text: article.url,
-                                style: "Hyperlink"
-                            })
-                        ]
-                    })
-
-                ]
-            }),
-
-            new Paragraph(
-                `Revision ID: ${article.revision ?? "Unavailable"
-                }`
-            ),
-
-            new Paragraph(
-                `Retrieved: ${article.retrievedAt ||
-                new Date().toISOString()
-                }`
-            ),
-
-            new Paragraph(""),
-
-            ...body
-        ];
-
-        if (warnings.length) {
-
-            children.push(
-                new Paragraph({
-                    text: "Conversion notes",
-                    heading: HeadingLevel.HEADING_2
-                })
-            );
-
-            for (const warning of new Set(warnings)) {
-                children.push(
-                    new Paragraph(warning)
-                );
-            }
+                onWarning: warning => warnings.push(String(warning?.message || warning))
+            });
+            if (!Array.isArray(body) || !body.length) throw new Error("Converter returned no content.");
+        } catch (error) {
+            warnings.push(`DOCX conversion fallback: ${error.message}. Text retained; formatting may be lost.`);
+            body = fallbackText(prepared.html).map(text => new Paragraph(text));
         }
-
+        const children = [
+            new Paragraph({ text: article.title, heading: HeadingLevel.HEADING_1, pageBreakBefore: pageBreak }),
+            ...WikiFidelity.metadata(article).map(([key, value]) => linkParagraph(key, value)),
+            new Paragraph(""),
+            ...body,
+            new Paragraph({ text: "Conversion diagnostics", heading: HeadingLevel.HEADING_3 }),
+            ...WikiFidelity.diagnostics({ ...article, prepared }, warnings).map(line => new Paragraph(line))
+        ];
         return children;
     }
 
-    // ========================================
-    // Generate complete DOCX document
-    // ========================================
-
-    async function createDocument(
-        articles,
-        summary = [],
-        failures = []
-    ) {
-
+    async function createDocument(articles, summary = [], failures = []) {
         ensureReady();
-
-        const {
-            Document,
-            Paragraph,
-            HeadingLevel,
-            Packer
-        } = globalThis.docx;
-
+        const { Document, Paragraph, HeadingLevel, Packer, TableOfContents } = globalThis.docx;
         const children = [];
-
-        // Category export summary.
-
-        if (summary.length) {
-
-            children.push(
-                new Paragraph({
-                    text: summary[0].replace(/^#\s*/, ""),
-                    heading: HeadingLevel.TITLE
-                })
-            );
-
-            for (const line of summary.slice(1)) {
-
-                children.push(
-                    new Paragraph(line)
-                );
-
+        const combined = summary.length > 0;
+        const hasTOC = combined && typeof TableOfContents === "function";
+        if (combined) {
+            children.push(new Paragraph({ text: summary[0].replace(/^#\s*/, ""), heading: HeadingLevel.TITLE }));
+            for (const line of summary.slice(1)) children.push(new Paragraph(line));
+            children.push(new Paragraph({ text: "Article index (source links)", heading: HeadingLevel.HEADING_2 }));
+            for (const [i, article] of articles.entries()) children.push(linkParagraph(`${i + 1}. ${article.title}`, article.url));
+            if (hasTOC) {
+                children.push(new Paragraph("Update the table of contents in Word to calculate page numbers."));
+                children.push(new TableOfContents("Table of Contents", { hyperlink: true, headingStyleRange: "1-2" }));
+            } else {
+                children.push(new Paragraph("Automatic TOC unavailable in this DOCX library build; the article index is retained."));
             }
         }
-
-        // Insert every selected article.
-
-        articles.forEach((article, index) => {
-
-            children.push(
-                ...articleToContent(
-                    article,
-                    index > 0 || summary.length > 0
-                )
-            );
-
-        });
-
-        // Include failed article report.
-
+        for (const [i, article] of articles.entries()) {
+            for (const element of articleToContent(article, i > 0 || combined)) children.push(element);
+        }
         if (failures.length) {
-
-            children.push(
-                new Paragraph({
-                    text: "Failed Articles",
-                    heading: HeadingLevel.HEADING_1,
-                    pageBreakBefore: true
-                })
-            );
-
-            for (const failure of failures) {
-                children.push(
-                    new Paragraph(failure)
-                );
-            }
+            children.push(new Paragraph({ text: "Failed Articles", heading: HeadingLevel.HEADING_1, pageBreakBefore: true }));
+            for (const failure of failures) children.push(new Paragraph(failure));
         }
-
+        const title = combined ? summary[0].replace(/^#\s*/, "") : articles[0]?.title || "Wiki Export";
         const document = new Document({
-
             creator: "Wiki Exporter",
-
-            title: articles.length === 1
-                ? articles[0].title
-                : "Wiki Category Export",
-
-            description:
-                "Research document generated by Wiki Exporter.",
-
-            sections: [{
-                children
-            }]
-
+            title,
+            description: "Research document generated by Wiki Exporter.",
+            ...(hasTOC ? { features: { updateFields: true } } : {}),
+            sections: [{ children }]
         });
-
         return await Packer.toBlob(document);
     }
-
-    return {
-        ensureReady,
-        createDocument
-    };
-
+    return { ensureReady, createDocument };
 })();

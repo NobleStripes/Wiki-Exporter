@@ -722,3 +722,14 @@ footer {
     }
 
 }
+
+/* v0.8.0 — research document settings */
+.collection-title-field {
+    margin: 16px 0;
+}
+.collection-title-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}

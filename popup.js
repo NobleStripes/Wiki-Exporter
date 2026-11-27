@@ -63,61 +63,23 @@ document.getElementById("export")
         );
       }
 
-      const exportFormat =
-        document.getElementById("export-format").value;
+      article.retrievedAt = new Date().toISOString();
+      article.license = WikiFidelity.rights(
+        article.licenseText, article.licenseURL, "Wiki license notice (open page)"
+      );
+      article.prepared = WikiFidelity.prepare(article);
+      if (!article.prepared.hasText) throw new Error("Prepared article is empty.");
 
-      const filename = article.title
-        .replace(/[<>:"/\|?*]/g, "_")
-        .trim()
-        .slice(0, 120) || "Article";
-
+      const exportFormat = document.getElementById("export-format").value;
+      const filename = article.title.replace(/[<>:"/\\|?*]/g, "_").trim().slice(0, 120) || "Article";
       if (exportFormat === "docx") {
-
-        status.textContent =
-          "Generating Word document...";
-
-        const blob = await WikiDocx.createDocument([
-          {
-            ...article,
-            retrievedAt: new Date().toISOString()
-          }
-        ]);
-
-        downloadFile(
-          blob,
-          `${filename}.docx`
-        );
-
+        status.textContent = "Generating Word document...";
+        const blob = await WikiDocx.createDocument([article]);
+        downloadFile(blob, `${filename}.docx`);
       } else {
-
-        const converter = new TurndownService({
-
-          headingStyle: "atx",
-          bulletListMarker: "-",
-          codeBlockStyle: "fenced"
-
-        });
-
-        converter.use(turndownPluginGfm.gfm);
-
-        const markdown = [
-
-          `# ${article.title}`,
-          `Source: ${article.url}`,
-          `Retrieved: ${new Date().toISOString()}`,
-          "",
-          converter.turndown(article.html)
-
-        ].join("\n\n");
-
-        downloadFile(
-          markdown,
-          `${filename}.md`,
-          "text/markdown"
-        );
-
+        const converter = WikiFidelity.createMarkdownConverter();
+        downloadFile(WikiFidelity.markdown(article, converter), `${filename}.md`, "text/markdown");
       }
-
 
       status.textContent = "Export generated.";
 
@@ -127,62 +89,63 @@ document.getElementById("export")
   });
 
 function extractArticle() {
-
-  if (
-    !location.hostname.endsWith(".fandom.com")
-  ) {
-    return {
-      error: "This version supports Fandom only."
-    };
+  if (location.protocol !== "https:" || !location.hostname.endsWith(".fandom.com")) {
+    return { error: "This version supports Fandom only." };
   }
+  const article = document.querySelector(".mw-parser-output");
+  if (!article) return { error: "Article content not found." };
 
-  const article = document.querySelector(
-    ".mw-parser-output"
-  );
-
-  if (!article) {
-    return {
-      error: "Article content not found."
-    };
+  // Read explicit revision metadata, never evaluate inline page scripts.
+  const revisionCandidates = new Set();
+  const addRevision = value => {
+    if (/^[1-9]\d*$/.test(String(value || ""))) revisionCandidates.add(String(value));
+  };
+  addRevision(document.querySelector('meta[property="mw:revisionId"]')?.content);
+  addRevision(new URL(location.href).searchParams.get("oldid"));
+  for (const link of document.querySelectorAll('#t-permalink a[href]')) {
+    try {
+      const u = new URL(link.href);
+      if (u.origin !== location.origin) continue;
+      addRevision(u.searchParams.get("oldid"));
+      const match = u.pathname.match(/\/Special:(?:PermanentLink|PermaLink)\/(\d+)$/i);
+      if (match) addRevision(match[1]);
+    } catch { /* Ignore malformed links. */ }
   }
+  for (const script of document.head.querySelectorAll('script:not([src])')) {
+    for (const match of script.textContent.matchAll(/"wgRevisionId"\s*:\s*([1-9]\d*)\b/g)) addRevision(match[1]);
+  }
+  const revision = revisionCandidates.size === 1 ? [...revisionCandidates][0] : null;
 
-  const content = article.cloneNode(true);
-
-  content.querySelectorAll(`
-    script,
-    style,
-    iframe,
-    .mw-editsection,
-    .wikia-ad,
-    .toc
-  `).forEach(element => element.remove());
-
-  content.querySelectorAll("a[href]")
-    .forEach(link => {
-      try {
-        const url = new URL(
-          link.getAttribute("href"),
-          document.baseURI
-        );
-
-        if (["http:", "https:"].includes(url.protocol)) {
-          link.setAttribute("href", url.href);
-        } else {
-          link.removeAttribute("href");
+  // Only inspect explicit license notices, not arbitrary links inside articles.
+  const licenses = new Map();
+  for (const link of document.querySelectorAll('head link[rel~="license"], #footer-info-copyright a[href], .page-footer__copyright a[href], .license-description a[href]')) {
+    try {
+      const u = new URL(link.getAttribute("href"), location.href);
+      if (!["https:", "http:"].includes(u.protocol)) continue;
+      const explicit = link.rel?.split(/\s+/).includes("license");
+      const isCC = /(^|\.)creativecommons\.org$/i.test(u.hostname) && /^\/(licenses|publicdomain)\//.test(u.pathname);
+      const generic = /(^|\.)fandom\.com$/i.test(u.hostname) && /^\/licensing\/?$/i.test(u.pathname);
+      if (!generic && (explicit || isCC)) {
+        u.hash = "";
+        if (isCC) {
+          u.protocol = "https:";
+          u.search = "";
+          const path = u.pathname.match(/^\/(?:licenses\/[a-z-]+\/[0-9.]+(?:\/[a-z]{2})?|publicdomain\/[a-z-]+\/[0-9.]+)\//i);
+          if (path) u.pathname = path[0];
         }
-      } catch {
-        link.removeAttribute("href");
+        licenses.set(u.href, link.textContent.trim() || u.href);
       }
-    });
-
+    } catch { /* Unknown source license remains unverified. */ }
+  }
+  const license = licenses.size === 1 ? [...licenses.entries()][0] : null;
   return {
-    title:
-      document.querySelector(".page-header__title")
-        ?.textContent.trim() || document.title,
-
+    title: document.querySelector(".page-header__title")?.textContent.trim() || document.title,
     url: location.href,
-
-    html: content.innerHTML
+    revision,
+    licenseText: license?.[1] || null,
+    licenseURL: license?.[0] || null,
+    // Return the untouched article body; shared preparation handles cleanup.
+    html: article.innerHTML
   };
 }
 

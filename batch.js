@@ -15,6 +15,7 @@
         document.getElementById("output-options");
     const formatOptions =
         document.getElementById("format-options");
+    const collectionTitle = document.getElementById("collection-title");
 
     const selectAllButton =
         document.getElementById("select-all");
@@ -366,6 +367,7 @@
 
         formatOptions.disabled = exporting;
         outputOptions.disabled = exporting;
+        collectionTitle.disabled = locked;
     }
 
     // ========================================
@@ -698,108 +700,7 @@
         };
     }
 
-    // ========================================
-    // Clean article HTML
-    // ========================================
-
-    function cleanArticle(html, baseUrl) {
-
-        const template = document.createElement("template");
-        template.innerHTML = html;
-
-        const content =
-            template.content.querySelector(".mw-parser-output")
-            || template.content;
-
-        content.querySelectorAll(`
-            script,
-            style,
-            iframe,
-            .mw-editsection,
-            .wikia-ad,
-            .toc
-        `).forEach(element => element.remove());
-
-        // Convert relative hyperlinks to absolute URLs.
-
-        content.querySelectorAll("a[href]")
-            .forEach(link => {
-
-                try {
-                    const url = new URL(
-                        link.getAttribute("href"),
-                        baseUrl
-                    );
-
-                    if (["http:", "https:"].includes(url.protocol)) {
-                        link.setAttribute("href", url.href);
-                    } else {
-                        link.removeAttribute("href");
-                    }
-
-                } catch {
-                    link.removeAttribute("href");
-                }
-            });
-
-        // Preserve usable image URLs.
-
-        content.querySelectorAll("img")
-            .forEach(image => {
-
-                const source =
-                    image.getAttribute("data-src") ||
-                    image.getAttribute("src");
-
-                try {
-
-                    const url = new URL(source || "", baseUrl);
-
-                    if (
-                        source &&
-                        ["http:", "https:"].includes(url.protocol)
-                    ) {
-                        image.setAttribute("src", url.href);
-                    } else {
-                        image.removeAttribute("src");
-                    }
-
-                } catch {
-                    image.removeAttribute("src");
-                }
-
-            });
-
-        return content;
-    }
-
-    // ========================================
-    // Markdown conversion
-    // ========================================
-
-    function convertArticle(article, converter) {
-
-        const content = cleanArticle(
-            article.html,
-            article.url
-        );
-
-        const markdown = converter.turndown(content);
-
-        if (!markdown.trim()) {
-            throw new Error("Converted article is empty.");
-        }
-
-        return [
-            `# ${article.title}`,
-            `Source: ${article.url}`,
-            `Revision ID: ${article.revision ?? "Unavailable"}`,
-            `Retrieved: ${new Date().toISOString()}`,
-            "",
-            markdown
-
-        ].join("\n\n");
-    }
+    // Content preparation and Markdown conversion now live in fidelity.js.
 
     // ========================================
     // Download combined Markdown
@@ -874,7 +775,7 @@
         const context =
             WikiCollection.describe(articles);
 
-        const categoryName = context.name;
+        const categoryName = collectionTitle.value.trim() || context.name;
 
         controller = new AbortController();
         WikiCollection.setExporting(true);
@@ -883,6 +784,7 @@
         const completed = [];
         const failed = [];
         const seenPages = new Set();
+        const licenseCache = new Map();
 
         let duplicates = 0;
 
@@ -936,13 +838,9 @@
                 WikiDocx.ensureReady();
             }
 
-            const converter = new TurndownService({
-                headingStyle: "atx",
-                bulletListMarker: "-",
-                codeBlockStyle: "fenced"
-            });
-
-            converter.use(turndownPluginGfm.gfm);
+            const converter = exportFormat === "md"
+                ? WikiFidelity.createMarkdownConverter()
+                : null;
 
             for (let i = 0; i < articles.length; i++) {
 
@@ -968,19 +866,39 @@
 
                     } else {
 
+                        article.retrievedAt = new Date().toISOString();
+
+                        // The existing request guard handles spacing, access errors and cooldowns.
+                        // If metadata retrieval is interrupted, retain this already-fetched article.
+                        let licenseIssue = "";
+                        try {
+                            article.license = await WikiFidelity.siteLicense(
+                                new URL(article.url).origin, licenseCache, signal
+                            );
+                        } catch (error) {
+                            article.license = null;
+                            licenseIssue = signal.aborted
+                                ? "License lookup cancelled."
+                                : `License lookup stopped: ${error.message}`;
+                            if (!signal.aborted) stopReason = licenseIssue;
+                        }
+
+                        article.prepared = WikiFidelity.prepare(article);
+                        if (licenseIssue) article.prepared.warnings.push(licenseIssue);
+                        if (!article.prepared.hasText) {
+                            throw new Error("Prepared article is empty.");
+                        }
                         completed.push({
-
                             ...article,
-
-                            retrievedAt: new Date().toISOString(),
-
                             markdown: exportFormat === "md"
-                                ? convertArticle(article, converter)
+                                ? WikiFidelity.markdown(article, converter)
                                 : null
-
                         });
-
                         seenPages.add(identity);
+                        if (licenseIssue || signal.aborted) {
+                            progress.value = i + 1;
+                            break;
+                        }
                     }
 
                 } catch (error) {
@@ -992,7 +910,7 @@
                         reason: error.message
                     });
 
-                    if (error.stopBatch) {
+                    if (error.stopBatch || stopReason) {
                         stopReason = error.message;
                         progress.value = i + 1;
                         break;
@@ -1010,6 +928,7 @@
 
             const partial =
                 signal.aborted ||
+                Boolean(stopReason) ||
                 failed.length > 0 ||
                 unprocessed > 0;
 
@@ -1031,7 +950,8 @@
 
                 `Unprocessed: ${unprocessed}`,
 
-                `Export status: ${partial ? "Partial" : "Complete"}`
+                `Export status: ${partial ? "Partial" : "Complete"}`,
+                ...(stopReason ? [`Stop reason: ${stopReason}`] : [])
 
             ];
 
@@ -1067,11 +987,7 @@
 
                     if (exportFormat === "docx") {
 
-                        status.textContent =
-                            `${message} ${completed.length} exported, ` +
-                            `${duplicates} duplicates skipped, ` +
-                            `${failed.length} failed, ` +
-                            `${unprocessed} unprocessed.`;
+                        status.textContent = "Generating Word document...";
 
                         const docxBlob =
                             await WikiDocx.createDocument(
@@ -1090,6 +1006,7 @@
                         const documentContent = [
 
                             summary.join("\n\n"),
+                            WikiFidelity.articleIndex(completed),
 
                             ...completed.map(
                                 article => article.markdown
@@ -1181,6 +1098,28 @@
 
                         manifest.join("\n")
                     );
+
+                    zip.file("export_manifest.json", JSON.stringify({
+                        collection: categoryName,
+                        sources: context.sources,
+                        status: partial ? "partial" : "complete",
+                        selected: articles.length,
+                        duplicates,
+                        unprocessed,
+                        stopReason: stopReason || null,
+                        failed,
+                        articles: completed.map(article => ({
+                            title: article.title,
+                            url: article.url,
+                            pageId: article.pageId ?? null,
+                            revision: article.revision ?? null,
+                            permanentRevision: WikiFidelity.revisionURL(article),
+                            retrievedAt: article.retrievedAt,
+                            license: article.license || null,
+                            detectedElements: article.prepared.stats,
+                            preparationWarnings: article.prepared.warnings
+                        }))
+                    }, null, 2));
 
                     const zipBlob = await zip.generateAsync({
 
