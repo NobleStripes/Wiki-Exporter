@@ -276,7 +276,45 @@
 
     });
 
-    searchInput.addEventListener("input", syncControls);
+    // ========================================
+    // Automatic Keyword Selection
+    // ========================================
+
+    function selectSearchMatches(rows = getArticleRows()) {
+
+        if (controller) return;
+
+        const query = searchInput.value.trim();
+
+        // Clearing the search retains the selection.
+
+        if (!query) return;
+
+        applyArticleView();
+
+        for (const row of rows) {
+
+            const checkbox = row.querySelector(
+                'input[type="checkbox"]'
+            );
+
+            if (checkbox) {
+
+                // Select matching articles only.
+
+                checkbox.checked = !row.hidden;
+
+            }
+        }
+    }
+
+    searchInput.addEventListener("input", () => {
+
+        selectSearchMatches();
+
+        syncControls();
+
+    });
 
     sortSelect.addEventListener("change", () => {
 
@@ -365,11 +403,32 @@
 
     restorePreferences();
 
-    new MutationObserver(() => {
+    new MutationObserver(records => {
+
         if (!controller) {
+
+            const addedRows = records
+                .flatMap(record => [...record.addedNodes])
+                .filter(node =>
+                    node.nodeType === Node.ELEMENT_NODE &&
+                    node.matches("label") &&
+                    node.parentElement === articleList
+                );
+
+            // Apply the current keyword filter only
+            // to newly imported articles.
+
+            if (addedRows.length) {
+
+                selectSearchMatches(addedRows);
+
+            }
+
             progress.value = 0;
             progress.hidden = true;
+
             status.textContent = "";
+
             report.textContent = "";
             report.hidden = true;
         }

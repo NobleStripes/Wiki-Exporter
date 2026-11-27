@@ -119,10 +119,16 @@
                     <input
                         type="search"
                         id="article-search"
-                        placeholder="Filter article titles..."
+                        placeholder="Enter keywords to select matching articles..."
                         autocomplete="off"
+                        aria-describedby="search-hint"
                         disabled
                     >
+
+                    <p class="search-hint" id="search-hint">
+                        Searching automatically selects matching articles
+                        and deselects non-matching articles.
+                    </p>
 
                 </div>
 

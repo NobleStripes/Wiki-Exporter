@@ -635,3 +635,9 @@ footer {
     }
 
 }
+
+.search-hint {
+    margin: 4px 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
