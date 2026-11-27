@@ -4,7 +4,7 @@
     const save=$("save-collection"), load=$("load-collection"), file=$("collection-file"), notice=$("archive-status");
     const history=$("history-enabled"), historyList=$("history-list"), clear=$("clear-history");
     function sync(){save.disabled=WikiCollection.busy || !$("article-list").querySelector('input[type="checkbox"]');}
-    function preferences(){return {title:$("collection-title").value,query:$("article-search").value,searchMode:$("search-mode").value,sort:$("article-sort").value,selectedOnly:$("selected-only").checked,format:document.querySelector('input[name="export-format"]:checked').value,output:document.querySelector('input[name="output-mode"]:checked').value,preview:$("preview-export").checked,manifest:$("combined-manifest").checked};}
+    function preferences(){return {title:$("collection-title").value,query:$("article-search").value,searchMode:$("search-mode").value,sort:$("article-sort").value,selectedOnly:$("selected-only").checked,format:document.querySelector('input[name="export-format"]:checked').value,output:document.querySelector('input[name="output-mode"]:checked').value,preview:$("preview-export").checked,manifest:$("combined-manifest").checked,linkMode:$("link-mode").value};}
     function applyPreferences(p){
         // Restore controls directly: do not run search input listeners that overwrite selections.
         $("collection-title").value=typeof p.title==="string"?p.title.slice(0,120):"";
@@ -14,6 +14,7 @@
         $("selected-only").checked=p.selectedOnly===true;
         $("preview-export").checked=p.preview===true;
         $("combined-manifest").checked=p.manifest===true;
+        $("link-mode").value=WikiLinks.normalize(p.linkMode);
         const fmt=Object.hasOwn(WikiArchive.formats,p.format)?p.format:"md";
         const mode=["combined","separate"].includes(p.output)?p.output:"combined";
         document.querySelector(`input[name="export-format"][value="${fmt}"]`).checked=true;

@@ -319,6 +319,15 @@
 
             <fieldset id="archive-options">
                 <legend>Preview and archive</legend>
+            <label for="link-mode">Article link handling</label>
+            <select id="link-mode">
+                <option value="retain">Retain All Links</option>
+                <option value="wiki">Strip Wiki Links</option>
+                <option value="inline">Strip Inline Links</option>
+                <option value="local">Local Navigation (HTML)</option>
+            </select>
+            <p class="search-hint">Recognizable citations and source metadata are preserved. Local navigation is HTML-only; other formats retain links.</p>
+
                 <label class="export-option"><input type="checkbox" id="preview-export"> Review prepared articles before downloading</label>
                 <label class="export-option"><input type="checkbox" id="combined-manifest"> Include manifest with combined document (ZIP)</label>
                 <p class="search-hint">Separate-file exports already include an export manifest.</p>
@@ -367,6 +376,7 @@
     <script src="vendor/docx-html.js"></script>
 
     <script src="fidelity.js"></script>
+    <script src="links.js"></script>
     <script src="archive.js"></script>
     <script src="docx-exporter.js"></script>
     <script src="settings.js"></script>

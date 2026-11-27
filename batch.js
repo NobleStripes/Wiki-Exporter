@@ -19,6 +19,7 @@
     const archiveOptions = document.getElementById("archive-options");
     const previewExport = document.getElementById("preview-export");
     const combinedManifest = document.getElementById("combined-manifest");
+    const linkModeSelect = document.getElementById("link-mode");
 
     const selectAllButton =
         document.getElementById("select-all");
@@ -616,6 +617,8 @@
     });
 
     restorePreferences();
+    linkModeSelect.value = WikiSettings.get("linkMode");
+    linkModeSelect.addEventListener("change",()=>WikiSettings.set("linkMode",linkModeSelect.value));
     document.addEventListener("collectionrestored", () => {
         syncOutputLabels();
         syncControls();
@@ -769,6 +772,9 @@
             'input[name="export-format"]:checked'
         )?.value || "md";
 
+        const requestedLinkMode = WikiLinks.normalize(linkModeSelect.value);
+        const linkMode = WikiLinks.effective(requestedLinkMode,exportFormat);
+
         if (!articles.length) {
             status.textContent = "No articles selected.";
             return;
@@ -875,6 +881,10 @@
                     if (seenPages.has(identity)) {
 
                         duplicates++;
+                        // Remember only aliases resolved by the successful article request.
+                        const existing = completed.find(a => (a.pageId > 0
+                            ? `${new URL(a.url).origin}:${a.pageId}` : a.url) === identity);
+                        if (existing) existing.aliases.push(articles[i]);
 
                     } else {
 
@@ -900,10 +910,11 @@
                         if (!article.prepared.hasText) {
                             throw new Error("Prepared article is empty.");
                         }
+                        const preparedArticle = WikiLinks.apply({...article, aliases:[articles[i]]},linkMode);
                         completed.push({
-                            ...article,
+                            ...preparedArticle,
                             markdown: exportFormat === "md"
-                                ? WikiFidelity.markdown(article, converter)
+                                ? WikiFidelity.markdown(preparedArticle, converter)
                                 : null
                         });
                         seenPages.add(identity);
@@ -982,8 +993,10 @@
                 const archiveInfo = {
                     collection: categoryName, sources: context.sources,
                     status: partial ? "partial" : "complete", selected: articles.length,
-                    duplicates, unprocessed, stopReason: stopReason || null, failed
+                    duplicates, unprocessed, stopReason: stopReason || null, failed,
+                    requestedLinkMode, linkMode
                 };
+                summary.push(`Body links: ${WikiLinks.labels[linkMode]}${requestedLinkMode !== linkMode ? " (HTML-only option falls back to retain)" : ""}`);
                 // Preview is local and uses the same prepared content as the export.
                 cancelButton.disabled = true;
                 if (previewExport.checked) {
@@ -1019,18 +1032,42 @@
                     const packaged = [];
                     const packagingFailures = [];
                     const names = new Map();
+                    const filenames = new Map(completed.map((article,index)=>[
+                        article.url,WikiLinks.filename(article,index,exportFormat)
+                    ]));
+                    const local = exportFormat === "html" && linkMode === "local";
+                    const plan = local ? WikiArchive.localPlan(completed,filenames) : null;
                     for (const [index, article] of completed.entries()) {
-                        const title = article.title.replace(/[<>:"/\\|?*\x00-\x1f]/g,"_")
-                            .replace(/\s+/g,"_").trim().slice(0,120) || "Article";
-                        const filename = `${String(index+1).padStart(3,"0")}_${title}.${exportFormat}`;
+                        const filename = filenames.get(article.url);
                         status.textContent = `Generating file ${index+1} of ${completed.length}...`;
                         try {
-                            folder.file(filename, await WikiArchive.build([article],exportFormat));
+                            folder.file(filename, await WikiArchive.build([article],exportFormat,[],[],{requestedLinkMode,linkMode},plan));
                             packaged.push(article);
                             names.set(article.url,`articles/${filename}`);
                         } catch(error) {
                             packagingFailures.push({url:article.url,reason:error.message});
                         }
+                    }
+                    // If a local HTML target failed, rebuild survivors against the final set.
+                    // Repeat only local conversion (never another network request).
+                    if (local && packagingFailures.length) {
+                        let changed;
+                        do {
+                            changed = false;
+                            const finalPlan = WikiArchive.localPlan(packaged,filenames);
+                            for (const article of [...packaged]) {
+                                const filename=filenames.get(article.url);
+                                try {
+                                    folder.file(filename,await WikiArchive.build([article],exportFormat,[],[],{requestedLinkMode,linkMode},finalPlan));
+                                } catch(error) {
+                                    folder.remove(filename);
+                                    packaged.splice(packaged.indexOf(article),1);
+                                    names.delete(article.url);
+                                    packagingFailures.push({url:article.url,reason:error.message});
+                                    changed=true;
+                                }
+                            }
+                        } while(changed && packaged.length);
                     }
                     count = packaged.length;
                     if (packagingFailures.length) {

@@ -17,6 +17,10 @@ formatSelect.addEventListener("change", () => {
 
 });
 
+const linkModeSelect = document.getElementById("link-mode");
+linkModeSelect.value = WikiSettings.get("linkMode");
+linkModeSelect.addEventListener("change",()=>WikiSettings.set("linkMode",linkModeSelect.value));
+
 document.getElementById("export")
   .addEventListener("click", async () => {
 
@@ -71,14 +75,17 @@ document.getElementById("export")
       if (!article.prepared.hasText) throw new Error("Prepared article is empty.");
 
       const exportFormat = document.getElementById("export-format").value;
+      const requestedLinkMode = WikiLinks.normalize(linkModeSelect.value);
+      const linkMode = WikiLinks.effective(requestedLinkMode,exportFormat);
+      const preparedArticle = WikiLinks.apply(article,linkMode);
       const filename = article.title.replace(/[<>:"/\\|?*]/g, "_").trim().slice(0, 120) || "Article";
       if (document.getElementById("preview-single").checked) {
-        if (!await WikiArchive.review([article], [], exportFormat, "single")) {
+        if (!await WikiArchive.review([preparedArticle], [], exportFormat, "single")) {
           status.textContent = "Export discarded. No download requested.";
           return;
         }
       }
-      const blob = await WikiArchive.build([article], exportFormat);
+      const blob = await WikiArchive.build([preparedArticle], exportFormat, [], [], {requestedLinkMode,linkMode});
       downloadFile(blob, `${filename}.${exportFormat}`);
       WikiArchive.log(exportFormat, "single", 1);
 

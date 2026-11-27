@@ -47,6 +47,14 @@
     <option value="json">Structured JSON (.json)</option>
   </select>
 
+            <label for="link-mode">Article link handling</label>
+            <select id="link-mode">
+                <option value="retain">Retain All Links</option>
+                <option value="wiki">Strip Wiki Links</option>
+                <option value="inline">Strip Inline Links</option>
+                <option value="local">Local Navigation (HTML)</option>
+            </select>
+            <p class="search-hint">Recognizable citations and source metadata are preserved. Local navigation is HTML-only; other formats retain links.</p>
   <label class="export-option"><input type="checkbox" id="preview-single"> Review before downloading</label>
   <button id="export">
     Export article
@@ -66,7 +74,8 @@
   <script src="vendor/docx-html.js"></script>
 
   <script src="fidelity.js"></script>
-  <script src="archive.js"></script>
+  <script src="links.js"></script>
+    <script src="archive.js"></script>
     <script src="docx-exporter.js"></script>
   <script src="settings.js"></script>
   <script src="category.js"></script>

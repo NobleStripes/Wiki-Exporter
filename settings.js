@@ -11,14 +11,16 @@ const WikiSettings = (() => {
         format: "md",
         output: "combined",
         sort: "asc",
-        searchMode: "exact"
+        searchMode: "exact",
+        linkMode: "retain"
     };
 
     const allowed = {
         format: ["md", "docx", "html", "txt", "json"],
         output: ["combined", "separate"],
         sort: ["asc", "desc", "relevance"],
-        searchMode: ["exact", "fuzzy"]
+        searchMode: ["exact", "fuzzy"],
+        linkMode: ["retain", "wiki", "inline", "local"]
     };
 
     function get(name) {

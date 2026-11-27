@@ -52,6 +52,7 @@ const WikiFidelity = (() => {
             ["License", license?.text || LICENSE_UNKNOWN],
             ...(license?.url ? [["License URL", license.url]] : []),
             ...(license?.source ? [["License evidence", license.source]] : []),
+            ...(article.linkMode ? [["Body link policy", article.linkMode === "local" ? "Local HTML navigation where targets exist" : article.linkMode === "wiki" ? "Strip ordinary wiki links" : article.linkMode === "inline" ? "Strip ordinary inline links" : "Retain links"]] : []),
             ["Changes", "Reformatted by Wiki Exporter; website interface elements removed; images represented by links or descriptions."],
             ["Rights note", "The declared wiki license may not cover third-party text or media; verify the original source before redistribution."]
         ];
@@ -182,7 +183,9 @@ const WikiFidelity = (() => {
             const target = new URL(href);
             if (revision && target.origin === source.origin &&
                 target.pathname === source.pathname && target.hash &&
-                !target.searchParams.has("action")) {
+                [...target.searchParams].every(([key,value]) =>
+                    key === "so" || key.startsWith("utm_") ||
+                    (key === "oldid" && value === String(article.revision)))) {
                 link.setAttribute("href", revision + target.hash);
             } else link.setAttribute("href", href);
         }

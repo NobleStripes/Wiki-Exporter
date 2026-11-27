@@ -10,7 +10,7 @@ const WikiArchive = (() => {
     }
     // Rebuild the prepared document using a strict element/attribute allowlist.
     // Never copy event handlers, CSS, resource URLs or arbitrary attributes.
-    function cleanHTML(html, base, preview=false) {
+    function cleanHTML(html, base, preview=false, local=null) {
         const source = document.createElement("template"); source.innerHTML = String(html ?? "");
         const dest = document.createElement("template");
         function copy(node,parent) {
@@ -20,10 +20,18 @@ const WikiArchive = (() => {
             if (discard.has(tag) || node.namespaceURI !== "http://www.w3.org/1999/xhtml") return;
             if (!tags.has(tag)) { for (const child of node.childNodes) copy(child,parent); return; }
             const el = document.createElement(tag);
+            if (local && !preview && node.hasAttribute("id")) {
+                const id = local.idFor(node.getAttribute("id"));
+                if (id) el.id = id;
+            }
             if (tag === "a") {
                 const raw = node.getAttribute("href");
                 const href = raw && httpURL(raw,base);
-                if (href && !preview) { el.setAttribute("href",href); el.setAttribute("rel","noopener noreferrer"); }
+                if (href && !preview) {
+                    const destination = local?.hrefFor(href,node);
+                    el.setAttribute("href", destination || href);
+                    el.setAttribute("rel","noopener noreferrer");
+                }
             }
             if (tag === "td" || tag === "th") for (const name of ["rowspan","colspan"]) {
                 const value = node.getAttribute(name);
@@ -54,9 +62,18 @@ const WikiArchive = (() => {
         }
         return read(t.content).replace(/[ \t]+\n/g,"\n").replace(/\n[ \t]+/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
     }
-    function record(article) {
+    function localPlan(articles, names=null) {
+        return WikiLinks.plan(articles,names,el=>{
+            if (!tags.has(el.localName) || discard.has(el.localName) || el.namespaceURI !== "http://www.w3.org/1999/xhtml") return false;
+            for (let p=el.parentElement;p;p=p.parentElement) {
+                if (discard.has(p.localName) || p.namespaceURI !== "http://www.w3.org/1999/xhtml") return false;
+            }
+            return true;
+        });
+    }
+    function record(article, local=null) {
         const prepared = article.prepared || WikiFidelity.prepare(article);
-        const html = cleanHTML(prepared.html,article.url);
+        const html = cleanHTML(prepared.html,article.url,false,local);
         const text = plainText(html);
         const readable = plainText(html,false);
         return {
@@ -85,7 +102,7 @@ const WikiArchive = (() => {
         const errors=failures.length?`<section><h2>Failed articles</h2><ul>${failures.map(f=>`<li>${esc(f)}</li>`).join("")}</ul></section>`:"";
         return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><title>${esc(title)}</title><style>body{max-width:850px;margin:0 auto;padding:1.5rem;font:16px/1.6 system-ui,sans-serif;color:#202124;background:#fff;overflow-wrap:anywhere}h1,h2,h3{line-height:1.25}article{border-top:1px solid #ccc;padding:1.5rem 0}dl{background:#f3f4f6;padding:1rem;font-size:.85em}dt{font-weight:bold}dd{margin:0 0 .45rem}table{border-collapse:collapse;max-width:100%;font-size:.9em}th,td{border:1px solid #bbb;padding:.5rem;vertical-align:top}th{background:#f1f5f9}pre{white-space:pre-wrap}blockquote{border-left:3px solid #bbb;padding-left:1rem}a{color:#1e40af}details{font-size:.85em;margin-top:1rem}summary{font-weight:bold}@media print{article{break-before:page}a{color:inherit}}</style></head><body>${header}${index}${articles}${errors}</body></html>`;
     }
-    async function build(articles,format,summary=[],failures=[],info={}) {
+    async function build(articles,format,summary=[],failures=[],info={},plan=null) {
         if (!Object.hasOwn(formats,format)) throw new Error("Unsupported export format.");
         if (format === "docx") return WikiDocx.createDocument(articles,summary,failures);
         let output;
@@ -94,7 +111,9 @@ const WikiArchive = (() => {
             const bodies=articles.map(a=>a.markdown || WikiFidelity.markdown(a,converter));
             output=[...(summary.length?[summary.join("\n\n"),WikiFidelity.articleIndex(articles)]:[]),...bodies,...(failures.length?["# Failed Articles\n\n"+failures.join("\n")]:[])].join("\n\n---\n\n");
         } else {
-            const records=articles.map(record);
+            const local = format === "html" && info.linkMode === "local"
+                ? (plan || localPlan(articles)) : null;
+            const records=articles.map(article=>record(article,local?.forArticle(article)||null));
             if (format === "html") output=htmlDocument(records,summary,failures);
             else if (format === "txt") output=[...(summary.length?[summary.join("\n"),"ARTICLE INDEX\n"+records.map((a,i)=>`${i+1}. ${a.title}`).join("\n")]:[]),...records.map(a=>[a.title,...Object.entries(a.attribution).map(([k,v])=>`${k}: ${v}`),"",a.content.text,"","Conversion diagnostics",...a.warnings].join("\n")),...(failures.length?["Failed articles\n"+failures.join("\n")]:[])].join("\n\n"+"=".repeat(60)+"\n\n");
             else output=JSON.stringify({schema:"wiki-exporter.articles",version:1,generatedAt:new Date().toISOString(),...info,summary,failures,articles:records},null,2);
@@ -131,5 +150,5 @@ const WikiArchive = (() => {
     function clearHistory(){try{localStorage.removeItem(HISTORY_KEY);}catch{/* Storage unavailable */}}
     function setHistoryEnabled(enabled){try{localStorage.setItem(ENABLED_KEY,String(Boolean(enabled)));if(!enabled)clearHistory();}catch{/* Storage unavailable */}}
     function log(format,mode,count,partial=false){if(!historyEnabled())return;try{localStorage.setItem(HISTORY_KEY,JSON.stringify([{time:new Date().toISOString(),format,mode,count,partial:Boolean(partial)},...readHistory()].slice(0,50)));}catch{/* Do not interrupt export */}}
-    return {formats,cleanHTML,plainText,record,manifest,build,review,historyEnabled,readHistory,setHistoryEnabled,clearHistory,log};
+    return {formats,cleanHTML,plainText,record,manifest,build,review,localPlan,historyEnabled,readHistory,setHistoryEnabled,clearHistory,log};
 })();
