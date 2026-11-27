@@ -24,18 +24,87 @@
 
     <main>
 
-        <h2 id="category-title">Category Export</h2>
+        <h2 id="category-title">Research Collection</h2>
 
         <div class="panel">
 
-            <p>
-                Load the category to view its
-                available articles.
-            </p>
+            <fieldset id="collection-controls">
 
-            <button id="load-category">
-                Load Category
-            </button>
+                <legend>Add Articles to Collection</legend>
+
+                <section class="source-section">
+
+                    <h3>Category Export</h3>
+
+                    <label for="category-url">
+                        Fandom Category URL
+                    </label>
+
+                    <input
+                        type="url"
+                        id="category-url"
+                        placeholder="Paste a Fandom category URL"
+                    >
+
+                    <button id="load-category">
+                        Load Category
+                    </button>
+
+                    <div id="subcategory-list"></div>
+
+                </section>
+
+                <hr>
+
+                <section class="source-section">
+
+                    <h3>Multiple Article URLs</h3>
+
+                    <label for="article-urls">
+                        Paste one article URL per line
+                    </label>
+
+                    <textarea
+                        id="article-urls"
+                        placeholder="https://example.fandom.com/wiki/Article"
+                        rows="5"
+                    ></textarea>
+
+                    <button id="add-urls">
+                        Add URLs to Collection
+                    </button>
+
+                </section>
+
+                <hr>
+
+                <section class="source-section">
+
+                    <h3>Open Browser Tabs</h3>
+
+                    <p class="source-description">
+                        Find open Fandom articles in your current
+                        browser window. Additional permission may
+                        be required.
+                    </p>
+
+                    <button id="load-tabs">
+                        Import Open Wiki Tabs
+                    </button>
+
+                </section>
+
+                <hr>
+
+                <button
+                    id="clear-collection"
+                    class="secondary"
+                    disabled
+                >
+                    Clear Collection
+                </button>
+
+            </fieldset>
 
             <p id="status" role="status"></p>
 

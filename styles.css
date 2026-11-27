@@ -539,3 +539,99 @@ footer {
     }
 
 }
+
+/* ========================================
+   v0.7.0 — Research Collection
+   ======================================== */
+
+#collection-controls {
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    min-width: 0;
+}
+
+#collection-controls legend {
+    padding: 0 8px;
+    font-weight: 600;
+}
+
+#collection-controls:disabled {
+    opacity: 0.65;
+}
+
+.source-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.source-section h3 {
+    margin: 0;
+}
+
+.source-section button {
+    align-self: flex-start;
+}
+
+.source-description {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+#article-urls {
+    min-height: 120px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+/* Subcategory explorer */
+
+#subcategory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+#subcategory-list:empty {
+    display: none;
+}
+
+.subcategory {
+    width: 100%;
+    text-align: left;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+}
+
+/* Article source information */
+
+.article-details {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.article-title {
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.article-wiki {
+    color: var(--text-secondary);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+
+    .source-section button {
+        width: 100%;
+    }
+
+}

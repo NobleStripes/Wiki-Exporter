@@ -213,3 +213,18 @@ function downloadFile(
     URL.revokeObjectURL(url);
   }, 30000);
 }
+
+// ========================================
+// Research Collection
+// ========================================
+
+document.getElementById("open-collection")
+    .addEventListener("click", async () => {
+
+        await chrome.tabs.create({
+            url: chrome.runtime.getURL(
+                "category.html"
+            )
+        });
+
+    });

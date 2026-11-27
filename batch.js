@@ -71,8 +71,8 @@
         return rows.sort((a, b) => {
 
             return direction * collator.compare(
-                a.textContent.trim(),
-                b.textContent.trim()
+                a.dataset.title || a.textContent.trim(),
+                b.dataset.title || b.textContent.trim()
             );
 
         });
@@ -108,9 +108,10 @@
 
         rows.forEach((row, index) => {
 
-            const title = row.textContent
-                .trim()
-                .toLocaleLowerCase();
+            const title = [
+                row.dataset.title || row.textContent.trim(),
+                row.dataset.host || ""
+            ].join(" ").toLocaleLowerCase();
 
             row.hidden = !title.includes(query);
 
@@ -174,7 +175,10 @@
         // Export controls.
 
         exportButton.disabled =
-            exporting || selected === 0 || overLimit;
+            exporting ||
+            WikiCollection.busy ||
+            selected === 0 ||
+            overLimit;
 
         cancelButton.disabled =
             !exporting || controller.signal.aborted;
@@ -283,6 +287,10 @@
     });
 
     articleList.addEventListener("change", syncControls);
+    document.addEventListener(
+        "collectionchange",
+        syncControls
+    );
 
     // ========================================
     // Export Preferences
@@ -376,21 +384,14 @@
     // Retrieve article through MediaWiki
     // ========================================
 
-    async function fetchArticle(articleUrl, origin, signal) {
+    async function fetchArticle(articleUrl, signal) {
 
-        const url = new URL(articleUrl);
+        const entry =
+            WikiCollection.parseArticle(articleUrl);
 
-        if (
-            url.protocol !== "https:" ||
-            url.origin !== origin ||
-            !url.pathname.startsWith("/wiki/")
-        ) {
-            throw new Error("Invalid article URL.");
-        }
+        const url = new URL(entry.url);
 
-        const page = decodeURIComponent(
-            url.pathname.replace(/^\/wiki\//, "")
-        );
+        const page = entry.title;
 
         const params = new URLSearchParams({
             action: "parse",
@@ -424,7 +425,8 @@
 
         return {
             title: parsed.title,
-            url: sourceUrl,
+            url: WikiCollection.parseArticle(sourceUrl).url,
+            pageId: parsed.pageid,
             revision: parsed.revid,
             html: html
         };
@@ -567,7 +569,7 @@
 
     async function exportBatch() {
 
-        if (controller) return;
+        if (controller || WikiCollection.busy) return;
 
         const articles = getSelectedArticles();
         const outputMode = outputOptions.querySelector(
@@ -593,20 +595,20 @@
             return;
         }
 
-        const categoryUrl = new URL(
-            new URLSearchParams(location.search).get("url")
-        );
+        const context =
+            WikiCollection.describe(articles);
 
-        const categoryName = decodeURIComponent(
-            categoryUrl.pathname
-                .replace(/^\/wiki\/Category:/, "")
-        ).replaceAll("_", " ");
+        const categoryName = context.name;
 
         controller = new AbortController();
+        WikiCollection.setExporting(true);
 
         const signal = controller.signal;
         const completed = [];
         const failed = [];
+        const seenPages = new Set();
+
+        let duplicates = 0;
 
         let stopReason = "";
 
@@ -626,6 +628,33 @@
         report.textContent = "";
 
         try {
+
+            const origins = [...new Set(
+
+                articles.map(articleUrl => {
+
+                    const entry =
+                        WikiCollection.parseArticle(articleUrl);
+
+                    return `${entry.origin}/*`;
+
+                })
+
+            )];
+
+            const granted =
+                await chrome.permissions.request({
+                    origins
+                });
+
+            if (!granted) {
+
+                throw new Error(
+                    "Permission not granted for selected wikis."
+                );
+            }
+
+            signal.throwIfAborted();
 
             if (exportFormat === "docx") {
                 WikiDocx.ensureReady();
@@ -650,19 +679,33 @@
 
                     const article = await fetchArticle(
                         articles[i],
-                        categoryUrl.origin,
                         signal
                     );
 
-                    completed.push({
-                        ...article,
+                    const identity = article.pageId > 0
+                        ? `${new URL(article.url).origin}:${article.pageId}`
+                        : article.url;
 
-                        retrievedAt: new Date().toISOString(),
+                    if (seenPages.has(identity)) {
 
-                        markdown: exportFormat === "md"
-                            ? convertArticle(article, converter)
-                            : null
-                    });
+                        duplicates++;
+
+                    } else {
+
+                        completed.push({
+
+                            ...article,
+
+                            retrievedAt: new Date().toISOString(),
+
+                            markdown: exportFormat === "md"
+                                ? convertArticle(article, converter)
+                                : null
+
+                        });
+
+                        seenPages.add(identity);
+                    }
 
                 } catch (error) {
 
@@ -684,7 +727,10 @@
             }
 
             const unprocessed =
-                articles.length - completed.length - failed.length;
+                articles.length -
+                completed.length -
+                failed.length -
+                duplicates;
 
             const partial =
                 signal.aborted ||
@@ -692,13 +738,25 @@
                 unprocessed > 0;
 
             const summary = [
-                `# Category Export: ${categoryName}`,
-                `Source: ${categoryUrl.href}`,
+
+                `# Wiki Export: ${categoryName}`,
+
+                ...context.sources.map(
+                    source => `Collection source: ${source}`
+                ),
+
                 `Selected articles: ${articles.length}`,
+
                 `Successfully extracted: ${completed.length}`,
+
+                `Duplicate articles skipped: ${duplicates}`,
+
                 `Failed: ${failed.length}`,
+
                 `Unprocessed: ${unprocessed}`,
+
                 `Export status: ${partial ? "Partial" : "Complete"}`
+
             ];
 
             const failures = failed.map(
@@ -734,7 +792,10 @@
                     if (exportFormat === "docx") {
 
                         status.textContent =
-                            "Generating Word document...";
+                            `${message} ${completed.length} exported, ` +
+                            `${duplicates} duplicates skipped, ` +
+                            `${failed.length} failed, ` +
+                            `${unprocessed} unprocessed.`;
 
                         const docxBlob =
                             await WikiDocx.createDocument(
@@ -844,7 +905,7 @@
 
                         manifest.join("\n")
                     );
-                    
+
                     const zipBlob = await zip.generateAsync({
 
                         type: "blob",
@@ -883,11 +944,14 @@
 
         } catch (error) {
 
-            status.textContent = error.message;
+            status.textContent = signal.aborted
+                ? "Export cancelled."
+                : error.message;
 
         } finally {
 
             controller = null;
+            WikiCollection.setExporting(false);
             loadButton.disabled = false;
             outputOptions.disabled = false;
 

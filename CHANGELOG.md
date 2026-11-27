@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.7.0] — Expanded Article Selection
+
+### Added
+- Research collection interface.
+- Multiple article URL imports.
+- Optional open browser tab imports.
+- Manual subcategory exploration.
+- Cross-community Fandom collections.
+- URL normalization and duplicate detection.
+- Redirect-based article deduplication.
+- Community source labels.
+- Clear collection controls.
+
+### Improved
+- Search by article title or community domain.
+- Collection-level source metadata.
+- Batch export statistics.
+- Permission requests limited to selected wiki origins.
+
+### Security
+- Optional browser tab permissions.
+- Tab permission revocation after import.
+- Existing request throttling and cooldowns retained.
+- Existing 100-article batch limit retained.
+- No autonomous recursive crawling.
+- No telemetry or AI dependencies.
+
 ## [0.6.0] — Selection and Usability Update
 
 ### Added

@@ -7,6 +7,9 @@
         "activeTab",
         "scripting"
     ],
+    "optional_permissions": [
+        "tabs"
+    ],
     "optional_host_permissions": [
         "https://*.fandom.com/*"
     ],
